@@ -5,7 +5,7 @@ use strict;
 use v5.10;
 use PDL;
 use PDL::GSLSF::ELLINT;
-use PDL::Graphics::Prima::Simple;
+use PDL::Graphics::Prima::Simple [700,500];
 
 ## Constants ##
 
@@ -18,13 +18,13 @@ my $mu	   	= 1; # 4*$pi*10**-7;
 
 my $afront 	= 1;
 my $aback  	= $afront;
-my $nloop  	= 1;
-my $length 	= 0;
+my $nloop  	= 100;
+my $length 	= 1;
 my $Icur   	= 1;
 
 ## Initial Conditions of Electron ##
 
-my $vi		= 1;
+my $vi		= 50;
 my $xi		= $aback/10;
 my $yi		= 0;
 my $zi		= -5 ;
@@ -40,26 +40,25 @@ my $v_c		= pdl (0,0,$vi);
 my $step 	= 500;
 my $tstep 	= ($zf - $zi) / $vi /$step;
 
-
 my ($x1,$y1,$z1) = sim();
 my $r1 = sqrt($x1**2+$y1**2);
 
-$xi		 = $aback/20;
+$xi		= $aback/20;
 $x_c	  	 = pdl ($xi,$yi,$zi);
 $v_c		 = pdl (0,0,$vi);
 my ($x2,$y2,$z2) = sim();
 my $r2 = sqrt($x2**2+$y2**2);
 
-$xi		 = 0;
-$x_c	  	 = pdl ($xi,$yi,$zi);
+$x_c	  	 = pdl (0,0,$zi);
 $v_c		 = pdl (0,0,$vi);
 my ($x3,$y3,$z3) = sim();
 my $r3 = sqrt($x3**2+$y3**2);
 
+my $time = sequence($step+2)*$tstep;
 
 plot(
   -height1	=> ds::Pair($z1,$r1,
-    color 	=> cl::Green,
+    color 	=> cl::Red,
     plotType 	=> ppair::Lines,
   ),
   -height2	=> ds::Pair($z2,$r2,
@@ -69,9 +68,10 @@ plot(
   -height3	=> ds::Pair($z3,$r3,
     color 	=> cl::Red,
     plotType 	=> ppair::Lines,
+    lineStyle 	=> lp::Dash,
   ),
-  x		=> {label => 'z',},# min => -1, max => -.75},
-  y		=> {label => 'r',},# min => 0.024, max => .026},
+  x		=> {label => 'z', min => -5, max => 16},
+  y		=> {label => 'r', min => -.001, max => .03},
 );
 
 
@@ -143,7 +143,7 @@ sub zstep {
 sub Btot {
   my $pos = shift;
   my $Btot;
-  for my $n (1..$nloop) {  ## CHANGE 1 to 0 FOR MULTIPLE LOOPS ##
+  for my $n (0..$nloop) {  ## CHANGE 1 to 0 FOR MULTIPLE LOOPS ##
     $Btot += Bloop($pos,$n);
   }
   return $Btot;
