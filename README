@@ -1,1 +1,5 @@
+README
 A simulation tracking the propagation of an electron through a current carrying wire.
+
+TO DO
+convert the simulation to a module/oo
