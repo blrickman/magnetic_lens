@@ -5,30 +5,34 @@ use strict;
 use v5.10;
 use PDL;
 use PDL::GSLSF::ELLINT;
-use PDL::Graphics::Prima::Simple [700,500];
+use PDL::Graphics::Prima::Simple [1000,500];
 
 ## Constants ##
 
 my $pi 		= 4 * atan2(1,1);
-my $charge 	= -1; # -1.6*10**-19;
-my $mass 	= 1;
-my $mu	   	= 1; # 4*$pi*10**-7;
+my $charge 	= -1.6*10**-19	; # C
+my $mass 	= 5.11*10**-31	; # kg
+my $mu	   	= 4*$pi*10**-7	; # 
+my $c		= 3*10**8	; # m/s
 
 ## Magnetic Lens Parameters ##
 
-my $afront 	= 1;
-my $aback  	= $afront;
-my $nloop  	= 100;
-my $length 	= 1;
-my $Icur   	= 1;
+my $afront 	= 10**-2	; # m
+my $aback  	= $afront/4	; # m
+my $nloop  	= 100		; 
+my $length 	= 10**-2	; # m 
+my $Icur   	= 26		; # A
 
 ## Initial Conditions of Electron ##
 
-my $vi		= 50;
-my $xi		= $aback/10;
-my $yi		= 0;
-my $zi		= -5 ;
-my $zf		= 15 ;
+my $KE		= 100*10**3	; # eV
+my $vi   	= $c*(1-($KE/($mass*$c**2)
+		  +1)**-2)**.5  ; # m/s
+#$vi		= 0.55*$c	; # m/s
+my $xi		= 10**-2/40	; # m
+my $yi		= 0		; # m
+my $zi		= -5*10**-2	; # m
+my $zf		=  5*10**-2	; # m
 
 my $x_c		= pdl ($xi,$yi,$zi);
 my $v_c		= pdl (0,0,$vi);
@@ -38,12 +42,12 @@ my $v_c		= pdl (0,0,$vi);
 ## Simulation ##
 
 my $step 	= 500;
-my $tstep 	= ($zf - $zi) / $vi /$step;
+my $tstep 	= ($zf - $zi) / $vi /$step; # s
 
 my ($x1,$y1,$z1) = sim();
 my $r1 = sqrt($x1**2+$y1**2);
 
-$xi		= $aback/20;
+$xi		= $xi/2;
 $x_c	  	 = pdl ($xi,$yi,$zi);
 $v_c		 = pdl (0,0,$vi);
 my ($x2,$y2,$z2) = sim();
@@ -56,6 +60,10 @@ my $r3 = sqrt($x3**2+$y3**2);
 
 my $time = sequence($step+2)*$tstep;
 
+my $lensxf = zeros(50);
+my $lensxb = ones(50)*$length;
+my $lensy  = (sequence(50)-25)*$afront;
+
 plot(
   -height1	=> ds::Pair($z1,$r1,
     color 	=> cl::Red,
@@ -66,12 +74,22 @@ plot(
     plotType 	=> ppair::Lines,
   ),
   -height3	=> ds::Pair($z3,$r3,
-    color 	=> cl::Red,
+    color 	=> cl::Green,
     plotType 	=> ppair::Lines,
     lineStyle 	=> lp::Dash,
   ),
-  x		=> {label => 'z', min => -5, max => 16},
-  y		=> {label => 'r', min => -.001, max => .03},
+  -front	=> ds::Pair($lensxf,$lensy,
+    color 	=> cl::Black,
+    plotType 	=> ppair::Lines,
+    lineStyle 	=> lp::Dash,
+  ),
+  -back		=> ds::Pair($lensxb,$lensy,
+    color 	=> cl::Black,
+    plotType 	=> ppair::Lines,
+    lineStyle 	=> lp::Dash,
+  ),
+  x		=> {label => 'z (m)', min => $zi, max => $zf},
+  y		=> {label => 'r (m)', min => -.00001, max => 1.1*$aback/10},
 );
 
 
