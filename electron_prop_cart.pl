@@ -2,6 +2,7 @@
 
 use warnings;
 use strict;
+use v5.10;
 use PDL;
 use PDL::GSLSF::ELLINT;
 use PDL::Graphics::Prima::Simple;
@@ -9,9 +10,9 @@ use PDL::Graphics::Prima::Simple;
 ## Constants ##
 
 my $pi 		= 4 * atan2(1,1);
-my $charge 	= 1;
+my $charge 	= -1; # -1.6*10**-19;
 my $mass 	= 1;
-my $mu	   	= 1;
+my $mu	   	= 1; # 4*$pi*10**-7;
 
 ## Magnetic Lens Parameters ##
 
@@ -23,48 +24,55 @@ my $Icur   	= 1;
 
 ## Initial Conditions of Electron ##
 
-my $vi		= 10;
-my $xi		= $aback/2;
+my $vi		= 1;
+my $xi		= $aback/10;
 my $yi		= 0;
-my $zi		= -10 ;
-my $zf		=  10 ;
+my $zi		= -5 ;
+my $zf		= 15 ;
 
 my $x_c		= pdl ($xi,$yi,$zi);
 my $v_c		= pdl (0,0,$vi);
-my @x_store	= $x_c;
-my @v_store	= $v_c;
 
 #my $B = mag_acc([0,0,0],[0,0,1]); print join(', ',@$B) . "\n";
 
 ## Simulation ##
 
-my $step 	= 300;
+my $step 	= 500;
 my $tstep 	= ($zf - $zi) / $vi /$step;
 
-my $z = sequence(100)/10 -5;
-my $x = ones(100)*0;
-my $y = -ones(100)*0;
-my $pos = transpose pdl ($x,$y,$z);
 
-my $B = Btot($pos);
-my ($Bx,$By,$Bz) = dog $B;
+my ($x1,$y1,$z1) = sim();
+my $r1 = sqrt($x1**2+$y1**2);
+
+$xi		 = $aback/20;
+$x_c	  	 = pdl ($xi,$yi,$zi);
+$v_c		 = pdl (0,0,$vi);
+my ($x2,$y2,$z2) = sim();
+my $r2 = sqrt($x2**2+$y2**2);
+
+$xi		 = 0;
+$x_c	  	 = pdl ($xi,$yi,$zi);
+$v_c		 = pdl (0,0,$vi);
+my ($x3,$y3,$z3) = sim();
+my $r3 = sqrt($x3**2+$y3**2);
+
 
 plot(
-  -by		=> ds::Pair($z,$By,
-    color 	=> cl::Red,
-  ),
-  -bx		=> ds::Pair($z,$Bx,
-    color 	=> cl::Blue,
-  ),
-  -bz		=> ds::Pair($z,$Bz,
+  -height1	=> ds::Pair($z1,$r1,
     color 	=> cl::Green,
+    plotType 	=> ppair::Lines,
+  ),
+  -height2	=> ds::Pair($z2,$r2,
+    color 	=> cl::Blue,
+    plotType 	=> ppair::Lines,
+  ),
+  -height3	=> ds::Pair($z3,$r3,
+    color 	=> cl::Red,
+    plotType 	=> ppair::Lines,
   ),
   x		=> {label => 'z',},# min => -1, max => -.75},
-  y		=> {label => 'B',},# min => 0.024, max => .026},
+  y		=> {label => 'r',},# min => 0.024, max => .026},
 );
-
-
-
 
 
 
@@ -73,6 +81,11 @@ plot(
 ########################### FUNCTIONS ###########################
 
 sub sim {
+
+  my @x_store	= $x_c;
+  my @v_store	= $v_c;
+
+
   for (0..$step) {
     my $ao = mag_acc($x_c,$v_c);
   
@@ -140,9 +153,8 @@ sub Btot {
 
 sub Br {
   my ($r,$z,$a) = @_;
-  #$r = ($r==0) ? 10**(-17) : $r;
   my ($K,) = gsl_sf_ellint_Kcomp(k($r,$z,$a));
-  my ($E,) = gsl_sf_ellint_Kcomp(k($r,$z,$a));
+  my ($E,) = gsl_sf_ellint_Ecomp(k($r,$z,$a));
   my $Br = $mu * $Icur * (-$K +($a**2 + $r**2 + $z**2)/((1 - k($r,$z,$a)**2)*Q($r,$z,$a)) * $E) / (2 * $pi * sqrt(Q($r,$z,$a)))*$z;
   unless (dims($Br)) {
     return ($Br==0) ? $Br : $Br/$r;
@@ -155,8 +167,10 @@ sub Br {
 
 sub Bz {
   my ($r,$z,$a) = @_;
+  #print k($r,$z,$a) .", ".Q($r,$z,$a)."\n";
   my ($K,) = gsl_sf_ellint_Kcomp(k($r,$z,$a)); 
-  my ($E,) = gsl_sf_ellint_Kcomp(k($r,$z,$a));
+  my ($E,) = gsl_sf_ellint_Ecomp(k($r,$z,$a));
+  #print "$K, \t$E\n";
   return $mu * $Icur * ($K + ($a**2 - $r**2 - $z**2) * $E /((1 - k($r,$z,$a)**2)*Q($r,$z,$a))) / (2 * $pi * sqrt(Q($r,$z,$a)));
 }
 
@@ -167,5 +181,5 @@ sub Q {
 
 sub k {
   my ($r,$z,$a) = @_;
-  return sqrt( 4 * $a * $r / Q($r,$z,$a) );
+  return sqrt(4*$a*$r/Q($r,$z,$a));
 }
