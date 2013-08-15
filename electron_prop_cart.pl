@@ -11,7 +11,7 @@ use PDL::Graphics::Prima::Simple [1000,500];
 
 my $pi 		= 4 * atan2(1,1);
 my $charge 	= -1.6*10**-19	; # C
-my $mass 	= 5.11*10**-31	; # kg
+my $mass 	= 9.11*10**-31	; # kg
 my $mu	   	= 4*$pi*10**-7	; # 
 my $c		= 3*10**8	; # m/s
 
