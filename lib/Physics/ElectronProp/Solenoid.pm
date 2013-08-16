@@ -7,7 +7,7 @@ use PDL::GSLSF::ELLINT;
 use Physics::ElectronProp::Auxiliary ':constants';
 
 use Digest::SHA1 'sha1_hex';
-use Data::Dumper;
+use PDL::IO::Dumper;
 use File::chdir;
 
 my $cache_data = 1;
@@ -38,11 +38,10 @@ sub _init {
   local $CWD = 'cache';
   if (-e $cache_filename & $cache_data) {
     print "Found cached magnetic field! Loading from $cache_filename\n";
-    open my $FH, $cache_filename;
-    $self->mag_field(retrieve($cache_filename));
+    $self->mag_field(frestore($cache_filename)); 
   } else {
     $self->mag_field($self->generate_field());
-    store($self->mag_field, $cache_filename);
+    fdump($self->mag_field,$cache_filename);
     print "Magnetic field cached as $cache_filename\n";
   }
   $self->mag_cur_pos_adjust();
