@@ -5,8 +5,11 @@ use strict;
 
 use parent 'Exporter';
 our %EXPORT_TAGS = ( 
-  constants   => [ qw/ pi me qe epsilon_0 vc mu_o / ],
+  constants   => [ qw/ pi me qe epsilon_0 vc mu_0 / ],
 );
+
+our @EXPORT_OK;
+push @EXPORT_OK, @$_ for values %EXPORT_TAGS;
 
 ## Constants ##
 
@@ -16,5 +19,10 @@ use constant {
   qe => 1.6e-19,
   epsilon_0 => 8.85e-12,
   vc => 2.9979e8,
+};
+
+use constant {
   mu_0 => 1/epsilon_0/vc**2,
 };
+
+1;

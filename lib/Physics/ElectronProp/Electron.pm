@@ -9,7 +9,7 @@ use PDL;
 
 sub energy   { $_[0]->{energy   }=$_[1] if defined $_[1]; $_[0]->{energy   } }
 sub position { $_[0]->{position }=$_[1] if defined $_[1]; $_[0]->{position } }
-sub velocity { $_[0]->{velocity }=$_[1] if defined $_[1]; $_[0]->{velocity } }
+sub velocity { $_[0]->{velocity }=$_[1] if defined $_[1]; $_[0]->{velocity } }n
 
 sub mass     {}
 sub charge   {}
