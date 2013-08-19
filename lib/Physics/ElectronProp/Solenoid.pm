@@ -36,7 +36,7 @@ sub _init {
     $self->mag_r_end,
   )) . ".dat";
   local $CWD = 'cache';
-  if (-e $cache_filename & $cache_data) {
+  if (-e $cache_filename && $cache_data) {
     print "Found cached magnetic field! Loading from $cache_filename\n";
     $self->mag_field(frestore($cache_filename)); 
   } else {
