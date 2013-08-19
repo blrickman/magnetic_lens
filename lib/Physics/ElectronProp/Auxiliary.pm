@@ -22,7 +22,7 @@ use constant {
 };
 
 use constant {
-  mu_0 => 1/epsilon_0/vc**2,
+  mu_0 => 4*pi*10**-7,
 };
 
 1;

@@ -24,37 +24,36 @@ sub front_diameter { $_[0]->{front_diameter}=$_[1] if defined $_[1]; $_[0]->{fro
 sub back_diameter  { $_[0]->{back_diameter }=$_[1] if defined $_[1]; $_[0]->{back_diameter } }
 sub num_loops      { $_[0]->{num_loops     }=$_[1] if defined $_[1]; $_[0]->{num_loops     } }
 sub sol_length     { $_[0]->{sol_length    }=$_[1] if defined $_[1]; $_[0]->{sol_length    } }
-sub sol_name	   { $_[0]->{sol_name      }=$_[1] if defined $_[1]; $_[0]->{sol_name      } }
-sub sol_shape	   { $_[0]->{sol_shape     }=$_[1] if defined $_[1]; $_[0]->{sol_shape     } }
+sub sol_shape      { $_[0]->{sol_shape     }=$_[1] if defined $_[1]; $_[0]->{sol_shape     } }
 sub current	   { $_[0]->{current       }=$_[1] if defined $_[1]; $_[0]->{current       } }
 sub front_pos	   { $_[0]->{front_pos     }=$_[1] if defined $_[1]; $_[0]->{front_pos     } }
-
-sub mag_field	   {$_[0]->{mag_field      }=$_[1] if defined $_[1]; $_[0]->{mag_field     } }
 
 ## Setup of solenoid ##
 
 sub Bloop {
   my $self = shift;
   my ($r,$z,$n) = @_;
-  my $Br = B_r($r, $z - $self->loop_step($n), $self->sol_shape($n));
-  my $Bz = B_z($r, $z - $self->loop_step($n), $self->sol_shape($n));
-  return pdl ($Br,$Bz)*$self->current;
+  my $Br = B_r($r, $z - $self->loop_step($n) - $self->front_pos, $self->sol_shape->($n));
+  my $Bz = B_z($r, $z - $self->loop_step($n) - $self->front_pos, $self->sol_shape->($n));
+  return pdl ($Br,0,$Bz)*$self->current;
 }
 
 sub loop_step {
   my $self = shift;
   my $n = shift;
+  return 0 if $self->num_loops == 0;
   return $self->sol_length * $n / $self->num_loops;
 }
 
 sub mag_tot {
   my $self = shift;
-  my ($r,$z) = @_;
+  my $pos  = shift;
+  my ($r,undef,$z) = list $pos;
   my $Btot;
   for my $n (0..$self->num_loops) {
     $Btot += $self->Bloop($r,$z,$n);
   }
-  return [list $Btot];
+  return $Btot;
 }
 
 ## Magnetic Field Functions ##
@@ -87,7 +86,7 @@ sub Q {
 
 sub k {
   my ($r,$z,$a) = @_;
-  return sqrt(4*$a*$r/Q($r,$z,$a));
+  return sqrt(4*$a*abs($r)/Q($r,$z,$a));
 }
 
 1;

@@ -19,20 +19,20 @@ my $c		= 3*10**8	; # m/s
 
 my $afront 	= 10**-2	; # m
 my $aback  	= $afront/4	; # m
-my $nloop  	= 100		; 
+my $nloop  	= 0		; 
 my $length 	= 10**-2	; # m 
-my $Icur   	= 26		; # A
+my $Icur   	= 10		; # A
 
 ## Initial Conditions of Electron ##
 
 my $KE		= 100*10**3	; # eV
 my $vi   	= $c*(1-($KE/($mass*$c**2)
 		  +1)**-2)**.5  ; # m/s
-#$vi		= 0.55*$c	; # m/s
+$vi		= 0.55*$c	; # m/s
 my $xi		= 10**-2/40	; # m
 my $yi		= 0		; # m
 my $zi		= -5*10**-2	; # m
-my $zf		=  5*10**-2	; # m
+my $zf		=  10*10**-2	; # m
 
 my $x_c		= pdl ($xi,$yi,$zi);
 my $v_c		= pdl (0,0,$vi);
@@ -41,7 +41,7 @@ my $v_c		= pdl (0,0,$vi);
 
 ## Simulation ##
 
-my $step 	= 500;
+my $step 	= 200;
 my $tstep 	= ($zf - $zi) / $vi /$step; # s
 
 my ($x1,$y1,$z1) = sim();
@@ -150,11 +150,13 @@ sub Bloop {
 
 sub a {
   my $n = shift;
+  return $afront if $nloop == 0;
   return $afront - ($afront - $aback) * $n / $nloop;
 }
 
 sub zstep {
   my $n = shift;
+  return 0 if $nloop == 0;
   return $length * $n / $nloop;
 }
 
