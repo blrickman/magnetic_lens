@@ -23,7 +23,7 @@ sub new {
 
 sub _init{
   my $self = shift;
-  $self->{time_step} = ($self->{z_end} - $self->{z_start}) / $self->{steps} / @{$self->electrons}[0]->{velocity}->index(2) unless defined $self->{time_step}; 
+  $self->{time_step} = ($self->{z_end} - $self->{z_start}) / $self->{steps} / @{$self->electrons}[0]->{velocity}->index(2) unless defined $self->{time_step};
 }
 
 ## Sim Components ##
@@ -67,11 +67,13 @@ sub evolve {
 
   
 
-  if ($electron->position->slice(0)<0) {
-    print "Error: Running into negative r values, decreasing time step\n";
-    $self->{time_step} /= 10;
-    $electron->velocity( $r_dot + $acc * $dt );
-    $electron->position( $r + $r_dot * $dt + $acc * $dt**2 / 2);
+  if ($electron->position->slice(0)< 0) {
+    my $backstep = 20;
+    my $dec_time = 50;
+    print "Running into negative r values, decreasing time step by $dec_time and taking $backstep steps back \n";
+    $self->{time_step} /= $dec_time;
+    $electron->velocity( ${$_->history('vel_hist')}[- $backstep] );
+    $electron->position( ${$_->history('pos_hist')}[- $backstep]);
   }
 }
 
@@ -79,7 +81,7 @@ sub run {
   my $self = shift;
   while (@{$self->electrons}[0]->{position}->index(2) <= $self->z_end) {
     $self->evolve( $_ ) for @{ $self->electrons };
-    say @{@{$_->history('pos_hist')}[0]} for @{ $self->electrons };
+    #say ${$_->history('pos_hist')}[-10] for @{ $self->electrons };
   }
 }
 

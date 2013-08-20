@@ -44,10 +44,7 @@ sub history {
   my $self  = shift;
   my $place = shift;
   my $store = shift;
-  $store = [list($store)] if defined $store;
-  for (0..2) {
-    push @{$self->{$place}[$_]}, $$store[$_] if defined $store;
-  }
+  push @{$self->{$place}}, $store if defined $store;
   $self->{$place};
 }
 

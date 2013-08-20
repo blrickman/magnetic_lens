@@ -16,10 +16,8 @@ sub new {
 
 sub _init {
   my $self = shift;
-  $self->{test} = 1;
   $self->mag_tot(pdl [0,0,0]);
-  $self->{test} -= 1;
-  print "The number of loops: " . $self->{test} . "\n";
+  print "The number of loops: " . $self->{test} -1 . "\n" if $self->{test};
   $self->{test} = 0;
 }
 
