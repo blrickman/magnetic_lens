@@ -22,7 +22,7 @@ sub _init {
     warn "energy and velocity given, possible conflict, using velocity parameter\n";
   } else{
     $self->velocity( $self->KE_to_vel( $self->energy * qe, $self->mass));
-    print "Converting energy (" . $self->energy."eV) to velocity along z\nv = ". $self->{velocity}[2] / vc . " c\n";
+    print "Converting energy (" . $self->energy / 1000 ."keV) to velocity along z\nv = ". $self->{velocity}[2] / vc . " c\n";
   }
 
   $self->{position} = pdl $self->position;

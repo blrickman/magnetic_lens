@@ -37,42 +37,50 @@ sub z_start 	{ $_[0]->{z_start  }}
 sub z_end   	{ $_[0]->{z_end    }}
 sub r_end   	{ $_[0]->{r_end    }}
 sub steps    	{ $_[0]->{steps	   }}
-sub time_step	{ $_[0]->{time_step}}
+sub time_step	{ $_[0]->{time_step} = $_[1] if defined $_[1]; $_[0]->{time_step} }
 
 
 sub evolve {
   my $self = shift;
   my $electron = shift;
 
-  my $dt = $self->time_step;
-  my $r  = $electron->position;
-  my $v  = $electron->velocity;
-  my $qe = $electron->charge;
+  my $dt    = $self->time_step;
+  my $r     = $electron->position;
+  my $r_dot = $electron->velocity;
 
   $electron->history('pos_hist',$r);
-  $electron->history('vel_hist',$v);
+  $electron->history('vel_hist',$r_dot);
 
-  my @force = map { $self->mag_force($v,$_) * $qe } map { $_->mag_tot($r) } @{ $self->solenoids };
+  my $v = pdl(dog($r_dot)); 
+  $v->slice(1) *= $r->slice(0);
+  
+  my @force = map { crossp($v,$_) * $electron->charge } map { $_->mag_tot($r) } @{ $self->solenoids };
   $force[0] += pop @force while @force > 1; 
   my $acc = $force[0] / ($electron->mass);
 
-  $electron->velocity( $v + $acc * $dt );
-  $electron->position( $r + $v * $dt + $acc * $dt**2 / 2);
+  $acc->slice(0) += $r->slice(0) * $r_dot->slice(1)**2;
+  $acc->slice(1) -= 2 * $r_dot->slice(0) * $r_dot->slice(1);
+  $acc->slice(1) /= $r->slice(0) unless $acc->slice(1) == 0;
+
+  $electron->velocity( $r_dot + $acc * $dt );
+  $electron->position( $r + $r_dot * $dt + $acc * $dt**2 / 2);
+
+  
+
+  if ($electron->position->slice(0)<0) {
+    print "Error: Running into negative r values, decreasing time step\n";
+    $self->{time_step} /= 10;
+    $electron->velocity( $r_dot + $acc * $dt );
+    $electron->position( $r + $r_dot * $dt + $acc * $dt**2 / 2);
+  }
 }
 
 sub run {
   my $self = shift;
-  while (@{$self->electrons}[0]->{position}->index(2) < $self->z_end) {
+  while (@{$self->electrons}[0]->{position}->index(2) <= $self->z_end) {
     $self->evolve( $_ ) for @{ $self->electrons };
+    say @{@{$_->history('pos_hist')}[0]} for @{ $self->electrons };
   }
-}
-
-sub mag_force {
-  my $self = shift;
-  my $v = shift;
-  my $B = shift;
-  my $force = crossp($v, $B);
-  return $force;
 }
 
 1;

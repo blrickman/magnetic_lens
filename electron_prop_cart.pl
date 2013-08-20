@@ -21,7 +21,7 @@ my $afront 	= 10**-2	; # m
 my $aback  	= $afront/4	; # m
 my $nloop  	= 0		; 
 my $length 	= 10**-2	; # m 
-my $Icur   	= 10		; # A
+my $Icur   	= 1000		; # A
 
 ## Initial Conditions of Electron ##
 

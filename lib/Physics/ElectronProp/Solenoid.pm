@@ -16,6 +16,11 @@ sub new {
 
 sub _init {
   my $self = shift;
+  $self->{test} = 1;
+  $self->mag_tot(pdl [0,0,0]);
+  $self->{test} -= 1;
+  print "The number of loops: " . $self->{test} . "\n";
+  $self->{test} = 0;
 }
 
 ## Magnetic Lens Parameters ##
@@ -32,6 +37,7 @@ sub front_pos	   { $_[0]->{front_pos     }=$_[1] if defined $_[1]; $_[0]->{front
 
 sub Bloop {
   my $self = shift;
+  $self->{test} += 1 if $self->{test};
   my ($r,$z,$n) = @_;
   my $Br = B_r($r, $z - $self->loop_step($n) - $self->front_pos, $self->sol_shape->($n));
   my $Bz = B_z($r, $z - $self->loop_step($n) - $self->front_pos, $self->sol_shape->($n));
@@ -86,7 +92,7 @@ sub Q {
 
 sub k {
   my ($r,$z,$a) = @_;
-  return sqrt(4*$a*abs($r)/Q($r,$z,$a));
+  return sqrt(4*$a*$r/Q($r,$z,$a));
 }
 
 1;
