@@ -23,6 +23,12 @@ sub new {
 
 sub _init{
   my $self = shift;
+  for (@{ $self->electrons }) {
+    my $electron = $_;
+    for (@{ $self->solenoids }) {
+      $electron->near_lens($_,0);
+    }
+  }
   $self->{time_step} = ($self->{z_end} - $self->{z_start}) / $self->{steps} / @{$self->electrons}[0]->{velocity}->index(2) unless defined $self->{time_step};
 }
 
@@ -67,6 +73,7 @@ sub evolve {
 
   #$self->check_negative_rad($electron);
   $self->going_2_0($electron);
+  $self->near_lens($electron);
 
 }
 
@@ -81,7 +88,7 @@ sub run {
 sub check_negative_rad {
   my $self = shift;
   my $electron = shift;
-  if ($electron->position->slice(0)< 0) {
+  if ($electron->position->slice(0) < 0) {
     my $backstep = 20;
     my $dec_time = 50;
     print "Running into negative r values, decreasing time step by $dec_time and taking $backstep steps back \n";
@@ -103,7 +110,23 @@ sub going_2_0 {
     $electron->{min_rad} *= 10;
     my $inc_time = 20;
     $self->{time_step} *= $inc_time;
-    print "The electron moving away from zero, increasing time step \n";
+    print "The electron is moving away from zero, increasing time step \n";
+  }
+}
+
+sub near_lens {
+  my $self = shift;
+  my $electron = shift;
+  for (@{ $self->solenoids }) {
+    if ($electron->position->slice(2) > $_->front_pos - $_->sol_length * .25 && ! $electron->near_lens($_) ) {
+      print "Electron is approaching a lens, decreasing time step \n";
+      $electron->near_lens($_,1);
+      $self->{time_step} /= 20;
+    } elsif ($electron->position->slice(2) > $_->front_pos + $_->sol_length * 1.25 && $electron->near_lens($_) == 1 ) {
+      print "Electron is leaving a lens, increasing time step \n";
+      $electron->near_lens($_,2);
+      $self->{time_step} *= 20;
+    }
   }
 }
 
