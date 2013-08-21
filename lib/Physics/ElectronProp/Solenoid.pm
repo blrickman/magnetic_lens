@@ -16,15 +16,28 @@ sub new {
 
 sub _init {
   my $self = shift;
+  $self->{num_loops} -= 1;
   $self->mag_tot(pdl [0,0,0]);
   print "The number of loops: " . $self->{test} -1 . "\n" if $self->{test};
   $self->{test} = 0;
 }
 
+sub plot_lens {
+  my $self = shift;
+  my $length = sequence(50)/49;
+  my $height = $length;
+  my $f_l = $height * $self->front_radius;
+  my $t_l = $self->sol_shape->($length);
+  my $b_l = $height->slice('-1:0') * $self->back_radius;
+  my $lens_x = pdl (list($self->front_pos * ones(50)),list($length * $self->sol_length + $self->front_pos),list(($self->front_pos + $self->sol_length) * ones(50)));
+  my $lens_y = pdl (list($f_l), list($t_l), list($b_l));
+  return ($lens_x, $lens_y);
+}
+
 ## Magnetic Lens Parameters ##
 
-sub front_diameter { $_[0]->{front_diameter}=$_[1] if defined $_[1]; $_[0]->{front_diameter} }
-sub back_diameter  { $_[0]->{back_diameter }=$_[1] if defined $_[1]; $_[0]->{back_diameter } }
+sub front_radius   { $_[0]->{front_radius  }=$_[1] if defined $_[1]; $_[0]->{front_radius  } }
+sub back_radius    { $_[0]->{back_radius   }=$_[1] if defined $_[1]; $_[0]->{back_radius   } }
 sub num_loops      { $_[0]->{num_loops     }=$_[1] if defined $_[1]; $_[0]->{num_loops     } }
 sub sol_length     { $_[0]->{sol_length    }=$_[1] if defined $_[1]; $_[0]->{sol_length    } }
 sub sol_shape      { $_[0]->{sol_shape     }=$_[1] if defined $_[1]; $_[0]->{sol_shape     } }
@@ -46,7 +59,7 @@ sub loop_step {
   my $self = shift;
   my $n = shift;
   return 0 if $self->num_loops == 0;
-  return $self->sol_length * $n / $self->num_loops;
+  return $self->sol_length * $n ;
 }
 
 sub mag_tot {
@@ -55,7 +68,7 @@ sub mag_tot {
   my ($r,undef,$z) = list $pos;
   my $Btot;
   for my $n (0..$self->num_loops) {
-    $Btot += $self->Bloop($r,$z,$n);
+    $Btot += $self->Bloop($r,$z,$n/$self->num_loops);
   }
   return $Btot;
 }

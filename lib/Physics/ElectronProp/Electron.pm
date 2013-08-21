@@ -24,7 +24,7 @@ sub _init {
     $self->velocity( $self->KE_to_vel( $self->energy * qe, $self->mass));
     print "Converting energy (" . $self->energy / 1000 ."keV) to velocity along z\nv = ". $self->{velocity}[2] / vc . " c\n";
   }
-
+  $self->min_rad($self->position->[0] * .1);
   $self->{position} = pdl $self->position;
   $self->{velocity} = pdl $self->velocity;
 }
@@ -37,6 +37,8 @@ sub velocity { $_[0]->{velocity }=$_[1] if defined $_[1]; $_[0]->{velocity } }
 
 sub mass     { $_[0]->{mass     }=$_[1] if defined $_[1]; $_[0]->{mass     } }
 sub charge   { $_[0]->{charge   }=$_[1] if defined $_[1]; $_[0]->{charge   } }
+
+sub min_rad  { $_[0]->{min_rad  }=$_[1] if defined $_[1]; $_[0]->{min_rad  } }
 
 ## Storing and Conversion Functions ##
 

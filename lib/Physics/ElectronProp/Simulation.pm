@@ -65,16 +65,9 @@ sub evolve {
   $electron->velocity( $r_dot + $acc * $dt );
   $electron->position( $r + $r_dot * $dt + $acc * $dt**2 / 2);
 
-  
+  #$self->check_negative_rad($electron);
+  $self->going_2_0($electron);
 
-  if ($electron->position->slice(0)< 0) {
-    my $backstep = 20;
-    my $dec_time = 50;
-    print "Running into negative r values, decreasing time step by $dec_time and taking $backstep steps back \n";
-    $self->{time_step} /= $dec_time;
-    $electron->velocity( ${$_->history('vel_hist')}[- $backstep] );
-    $electron->position( ${$_->history('pos_hist')}[- $backstep]);
-  }
 }
 
 sub run {
@@ -82,6 +75,35 @@ sub run {
   while (@{$self->electrons}[0]->{position}->index(2) <= $self->z_end) {
     $self->evolve( $_ ) for @{ $self->electrons };
     #say ${$_->history('pos_hist')}[-10] for @{ $self->electrons };
+  }
+}
+
+sub check_negative_rad {
+  my $self = shift;
+  my $electron = shift;
+  if ($electron->position->slice(0)< 0) {
+    my $backstep = 20;
+    my $dec_time = 50;
+    print "Running into negative r values, decreasing time step by $dec_time and taking $backstep steps back \n";
+    $self->{time_step} /= $dec_time;
+    $electron->velocity( ${$_->history('vel_hist')}[- $backstep]);
+    $electron->position( ${$_->history('pos_hist')}[- $backstep]);
+  }
+}
+
+sub going_2_0 {
+  my $self = shift;
+  my $electron = shift;
+  if ($electron->position->slice(0) < $electron->min_rad) {
+    $electron->{min_rad} /= 10;
+    my $dec_time = 20;
+    $self->{time_step} /= $dec_time;
+    print "The electron is approaching zero, lowering time step \n";
+  } elsif ($electron->position->slice(0) > $electron->min_rad * 10) {
+    $electron->{min_rad} *= 10;
+    my $inc_time = 20;
+    $self->{time_step} *= $inc_time;
+    print "The electron moving away from zero, increasing time step \n";
   }
 }
 
