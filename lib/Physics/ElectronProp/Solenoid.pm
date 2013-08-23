@@ -36,6 +36,7 @@ sub plot_lens {
 
 ## Magnetic Lens Parameters ##
 
+sub sol_name       { $_[0]->{sol_name      }=$_[1] if defined $_[1]; $_[0]->{sol_name      } }
 sub front_radius   { $_[0]->{front_radius  }=$_[1] if defined $_[1]; $_[0]->{front_radius  } }
 sub back_radius    { $_[0]->{back_radius   }=$_[1] if defined $_[1]; $_[0]->{back_radius   } }
 sub num_loops      { $_[0]->{num_loops     }=$_[1] if defined $_[1]; $_[0]->{num_loops     } }

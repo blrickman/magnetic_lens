@@ -40,6 +40,7 @@ sub charge   { $_[0]->{charge   }=$_[1] if defined $_[1]; $_[0]->{charge   } }
 
 sub min_rad  { $_[0]->{min_rad  }=$_[1] if defined $_[1]; $_[0]->{min_rad  } }
 sub near_lens{ $_[0]->{near_lens}->{$_[1]} = $_[2] if defined $_[2]; $_[0]->{near_lens}->{$_[1]} }
+sub previous_force { $_[0]->{previous_force} = $_[1] if defined $_[1]; $_[0]->{previous_force} }
 
 ## Storing and Conversion Functions ##
 
