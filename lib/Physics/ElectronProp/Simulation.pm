@@ -25,6 +25,7 @@ sub _init{
   my $self = shift;
   for (@{ $self->electrons }) {
     my $electron = $_;
+    $electron->previous_force(0);
     for (@{ $self->solenoids }) {
       $electron->near_lens($_,0);
     }
@@ -103,15 +104,15 @@ sub going_2_0 {
   my $self = shift;
   my $electron = shift;
   if ($electron->position->slice(0) < $electron->min_rad) {
-    $electron->{min_rad} /= 10;
+    $electron->{min_rad} /= 30;
     my $dec_time = 20;
     $self->{time_step} /= $dec_time;
-    print "The electron is approaching zero, lowering time step \n";
-  } elsif ($electron->position->slice(0) > $electron->min_rad * 10) {
-    $electron->{min_rad} *= 10;
+    print "The electron is approaching zero, lowering time step \nElectron at z = ". $electron->position->slice(2)*100 . "cm\n";
+  } elsif ($electron->position->slice(0) > $electron->min_rad * 50) {
+    $electron->{min_rad} *= 50;
     my $inc_time = 20;
     $self->{time_step} *= $inc_time;
-    print "The electron is moving away from zero, increasing time step \n";
+    print "The electron is moving away from zero, increasing time step \nElectron at z = ". $electron->position->slice(2)*100 . "cm\n";
   }
 }
 
@@ -134,19 +135,19 @@ sub near_lens {
 sub check_force_magnitude {
   my $self = shift;
   my $electron = shift;
-  my $force = shift;
-  my @force_mag = map {$_**2} @{$force};
-  $force_mag[0] += pop @force_mag while @force_mag > 1; 
-  $force = $force_mag[0]**.5;
-  if ($force > $electron->previous_force * 10) {
-      print "Force on electron is growing stronger, decreasing time step \n";
-      $electron->previous_force($force);
-      $self->{time_step} /= 10 ;
-    } elsif ($force < $electron->previous_force * 10) {
-      print "Force on electron is growing weaker, increasing time step \n";
-      $electron->previous_force($force);
-      $self->{time_step} *= 10 ;
-    }
+  my @force = list shift; 
+  @force = map {$_**2} @force;
+  my $force;
+  $force += pop @force while @force > 1;
+  $force = $force**.5;
+  if ($force > $electron->previous_force * 100) {
+    print "Force on electron is growing stronger, decreasing time step \nElectron at z = ". $electron->position->slice(2)*100 . "cm\n";
+    $electron->previous_force($force);
+    $self->{time_step} /= 10 ;
+  } elsif ($force < $electron->previous_force /100) {
+    print "Force on electron is growing weaker, increasing time step\nElectron at z = ". $electron->position->slice(2)*100 . "cm\n";
+    $electron->previous_force($force);
+    $self->{time_step} *= 10 ;
   }
 }
 
