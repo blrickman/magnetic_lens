@@ -22,9 +22,10 @@ sub _init {
     warn "energy and velocity given, possible conflict, using velocity parameter\n";
   } else{
     $self->velocity( $self->KE_to_vel( $self->energy * qe, $self->mass));
-    print "Converting energy (" . $self->energy / 1000 ."keV) to velocity along z\nv = ". $self->{velocity}[2] / vc . " c\n";
+    print "Converting energy (" . $self->energy / 1000 ."keV) to velocity along z\nv = ". sprintf ("%.4f",$self->{velocity}[2] / vc ) . " c\n";
   }
-  $self->min_rad($self->position->[0] * .1);
+  $self->min_rad([sqrt($self->position->[0]**2+$self->position->[1]**2),$self->position->[2]]);
+  $self->small_rad($self->position->[0] * .1);
   $self->{position} = pdl $self->position;
   $self->{velocity} = pdl $self->velocity;
 }
@@ -39,6 +40,8 @@ sub mass     { $_[0]->{mass     }=$_[1] if defined $_[1]; $_[0]->{mass     } }
 sub charge   { $_[0]->{charge   }=$_[1] if defined $_[1]; $_[0]->{charge   } }
 
 sub min_rad  { $_[0]->{min_rad  }=$_[1] if defined $_[1]; $_[0]->{min_rad  } }
+
+sub small_rad  { $_[0]->{small_rad  }=$_[1] if defined $_[1]; $_[0]->{small_rad  } }
 sub near_lens{ $_[0]->{near_lens}->{$_[1]} = $_[2] if defined $_[2]; $_[0]->{near_lens}->{$_[1]} }
 sub previous_force { $_[0]->{previous_force} = $_[1] if defined $_[1]; $_[0]->{previous_force} }
 
