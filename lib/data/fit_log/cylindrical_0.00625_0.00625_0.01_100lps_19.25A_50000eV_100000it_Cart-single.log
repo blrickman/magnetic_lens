@@ -1,0 +1,49 @@
+
+
+*******************************************************************************
+Wed Aug 28 15:26:06 2013
+
+
+FIT:    data read from file1 using ($3*100):(($1**2+$2**2)**.5*1000) every ::min::max
+        format = x:z
+        #datapoints = 1001
+        residuals are weighted equally (unit weight)
+
+function used for fitting: beam1(x)
+fitted parameters initialized with current variable values
+
+
+
+ Iteration 0
+ WSSR        : 1259.05           delta(WSSR)/WSSR   : 0
+ delta(WSSR) : 0                 limit for stopping : 1e-06
+ lambda	  : 0.719624
+
+initial set of free parameter values
+
+w01             = 1
+xc1             = 1
+xR1             = 1
+
+After 334 iterations the fit converged.
+final sum of squares of residuals : 2.53371e-11
+rel. change during last iteration : -9.46587e-08
+
+degrees of freedom    (FIT_NDF)                        : 998
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 1.59336e-07
+variance of residuals (reduced chisquare) = WSSR/ndf   : 2.53878e-14
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+
+w01             = 0.000521118      +/- 2.354e-08    (0.004518%)
+xc1             = 1.51226          +/- 2.453e-08    (1.622e-06%)
+xR1             = -0.0023686       +/- 1.074e-07    (0.004536%)
+
+
+correlation matrix of the fit parameters:
+
+               w01    xc1    xR1    
+w01             1.000 
+xc1            -0.081  1.000 
+xR1            -1.000  0.084  1.000 

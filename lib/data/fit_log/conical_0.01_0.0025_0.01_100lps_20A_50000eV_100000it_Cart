@@ -1,0 +1,147 @@
+
+
+*******************************************************************************
+Wed Aug 28 14:27:29 2013
+
+
+FIT:    data read from file1 using ($3*100):(($1**2+$2**2)**.5*1000) every ::min::max
+        format = x:z
+        #datapoints = 1001
+        residuals are weighted equally (unit weight)
+
+function used for fitting: beam1(x)
+fitted parameters initialized with current variable values
+
+
+
+ Iteration 0
+ WSSR        : 1257.44           delta(WSSR)/WSSR   : 0
+ delta(WSSR) : 0                 limit for stopping : 1e-06
+ lambda	  : 0.719609
+
+initial set of free parameter values
+
+w01             = 1
+xc1             = 1
+xR1             = 1
+
+After 58 iterations the fit converged.
+final sum of squares of residuals : 1.23426e-11
+rel. change during last iteration : -2.67913e-11
+
+degrees of freedom    (FIT_NDF)                        : 998
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 1.11209e-07
+variance of residuals (reduced chisquare) = WSSR/ndf   : 1.23674e-14
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+
+w01             = 0.000597454      +/- 1.619e-08    (0.002711%)
+xc1             = 1.52082          +/- 1.483e-08    (9.749e-07%)
+xR1             = -0.0024429       +/- 6.649e-08    (0.002722%)
+
+
+correlation matrix of the fit parameters:
+
+               w01    xc1    xR1    
+w01             1.000 
+xc1            -0.051  1.000 
+xR1            -1.000  0.052  1.000 
+
+
+*******************************************************************************
+Wed Aug 28 14:27:30 2013
+
+
+FIT:    data read from file2 using ($3*100):(($1**2+$2**2)**.5*1000) every ::min::max
+        format = x:z
+        #datapoints = 1001
+        residuals are weighted equally (unit weight)
+
+function used for fitting: beam2(x)
+fitted parameters initialized with current variable values
+
+
+
+ Iteration 0
+ WSSR        : 1264.65           delta(WSSR)/WSSR   : 0
+ delta(WSSR) : 0                 limit for stopping : 1e-06
+ lambda	  : 0.719738
+
+initial set of free parameter values
+
+w02             = 1
+xc2             = 1
+xR2             = 1
+
+After 99 iterations the fit converged.
+final sum of squares of residuals : 5.47526e-12
+rel. change during last iteration : -4.89305e-07
+
+degrees of freedom    (FIT_NDF)                        : 998
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 7.40691e-08
+variance of residuals (reduced chisquare) = WSSR/ndf   : 5.48623e-15
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+
+w02             = 0.000398417      +/- 1.078e-08    (0.002707%)
+xc2             = 1.52116          +/- 1.482e-08    (9.74e-07%)
+xR2             = 0.00244458       +/- 6.644e-08    (0.002718%)
+
+
+correlation matrix of the fit parameters:
+
+               w02    xc2    xR2    
+w02             1.000 
+xc2            -0.051  1.000 
+xR2             1.000 -0.052  1.000 
+
+
+*******************************************************************************
+Wed Aug 28 14:27:32 2013
+
+
+FIT:    data read from file3 using ($3*100):(($1**2+$2**2)**.5*1000) every ::min::max
+        format = x:z
+        #datapoints = 1001
+        residuals are weighted equally (unit weight)
+
+function used for fitting: beam3(x)
+fitted parameters initialized with current variable values
+
+
+
+ Iteration 0
+ WSSR        : 1271.76           delta(WSSR)/WSSR   : 0
+ delta(WSSR) : 0                 limit for stopping : 1e-06
+ lambda	  : 0.719816
+
+initial set of free parameter values
+
+w03             = 1
+xc3             = 1
+xR3             = 1
+
+After 19 iterations the fit converged.
+final sum of squares of residuals : 1.3673e-12
+rel. change during last iteration : -3.39831e-11
+
+degrees of freedom    (FIT_NDF)                        : 998
+rms of residuals      (FIT_STDFIT) = sqrt(WSSR/ndf)    : 3.70141e-08
+variance of residuals (reduced chisquare) = WSSR/ndf   : 1.37004e-15
+
+Final set of parameters            Asymptotic Standard Error
+=======================            ==========================
+
+w03             = 0.000199243      +/- 5.388e-09    (0.002704%)
+xc3             = 1.52137          +/- 1.481e-08    (9.735e-07%)
+xR3             = 0.00244559       +/- 6.641e-08    (0.002715%)
+
+
+correlation matrix of the fit parameters:
+
+               w03    xc3    xR3    
+w03             1.000 
+xc3            -0.051  1.000 
+xR3             1.000 -0.052  1.000 
