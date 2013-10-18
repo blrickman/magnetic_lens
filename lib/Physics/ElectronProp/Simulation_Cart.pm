@@ -4,6 +4,7 @@ use warnings;
 use strict;
 use v5.10;
 use PDL;
+use Term::ProgressBar;
 
 use Physics::ElectronProp::Solenoid;
 use Physics::ElectronProp::Electron;
@@ -62,14 +63,43 @@ sub evolve {
   my $acc = $self->mag_force($vel, pdl ($Bx, $By, $Bz) ) * $qe / ($electron->mass);
   $electron->velocity( $vel + $acc * $dt );
   $electron->position( $pos + $vel * $dt + $acc * $dt**2 / 2 );
+
+  #$self->near_lens($electron);
 }
 
 sub run {
   my $self = shift;
-  while (@{$self->electrons}[0]->{position}->index(2) < $self->z_end) {
-    $self->evolve( $_ ) for @{ $self->electrons };
+  my $progress = Term::ProgressBar->new({
+    count => @{ $self->electrons } * $self->steps, 
+    ETA => 'linear',
+    name => 'Progress',
+  });
+  my $l = 0;
+  for my $electron (@{ $self->electrons }) { 
+    while ($electron->{position}->index(2) < $self->z_end) {
+      $self->evolve( $electron );
+      $progress->update($l) unless $l++ % 100; 
+    }
   }
+  $progress->update(@{ $self->electrons } * $self->steps);
+  print "\n";
   shift @{$_->history('time')} for @{ $self->electrons };
+}
+
+sub near_lens {
+  my $self = shift;
+  my $electron = shift;
+  for (@{ $self->solenoids }) {
+    if ($electron->position->slice(2) > $_->front_pos - $_->sol_length * 1.5 && ! $electron->near_lens($_) ) {
+      print "Electron is approaching a lens, decreasing time step \n";
+      $electron->near_lens($_,1);
+      $self->{time_step} /= 10 ;
+    } elsif ($electron->position->slice(2) > $_->front_pos + $_->sol_length * 1.1 && $electron->near_lens($_) == 1 ) {
+      print "Electron is leaving a lens, increasing time step \n";
+      $electron->near_lens($_,2);
+      $self->{time_step} *= 10 ;
+    }
+  }
 }
 
 sub mag_force {
