@@ -7,6 +7,7 @@ use PDL;
 use Term::ProgressBar;
 
 use Physics::ElectronProp::Solenoid;
+use Physics::ElectronProp::RF_Cavity;
 use Physics::ElectronProp::Electron;
 use Physics::ElectronProp::Auxiliary ':constants';
 
@@ -27,7 +28,7 @@ sub _init{
 ## Sim Components ##
 
 sub electrons 	{$_[0]->{electrons }}
-sub solenoids 	{$_[0]->{solenoids }}
+sub lens 	{$_[0]->{lens }}
 
 ## Sim Parameters ##
 
@@ -53,14 +54,25 @@ sub evolve {
   my $r = sqrt($pos->index(0)**2 + $pos->index(1)**2);
   my $theta = atan2($pos->index(1),$pos->index(0));
   my $z = $pos->index(2); 
-  $electron->min_rad([$r,$z]) if ($electron->min_rad->[0] > $r);
+  #$electron->min_rad([$r,$z]) if ($electron->min_rad->[0] > $r);
   
-  my @field = map { $_->mag_tot(pdl ($r,0,$z)) } @{ $self->solenoids };
-  $field[0] += pop @field while @field > 1;
-  my ($Br,undef,$Bz) = dog($field[0]);
-  my ($Bx, $By) = ($Br * cos($theta), $Br * sin($theta));
+  ## B-Field ##
 
-  my $acc = $self->mag_force($vel, pdl ($Bx, $By, $Bz) ) * $qe / ($electron->mass);
+  my @Bfield = map { $_->B_Field(pdl ($r,$theta,$z)) } @{ $self->lens };
+  $Bfield[0] += pop @Bfield while @Bfield > 1;
+  my ($Br,$Bt,$Bz) = dog($Bfield[0]);
+  my ($Bx, $By) = ($Br * cos($theta) - $Bt * sin($theta), $Br * sin($theta) + $Bt * cos($theta));
+
+  ## E-Field ##
+
+  my @Efield = map { $_->E_Field(pdl ($r,$theta,$z)) } @{ $self->lens };
+  $Efield[0] += pop @Efield while @Efield > 1;
+  my ($Er,$Et,$Ez) = dog($Efield[0]);
+  my ($Ex, $Ey) = ($Er * cos($theta) - $Et * sin($theta), $Er * sin($theta) + $Et * cos($theta));
+
+  ## Lorentz Force Calculation ##
+
+  my $acc = (crossp(($vel, pdl($Bx, $By, $Bz)) + pdl($Ex, $Ey, $Ez)) * $qe / ($electron->mass);
   $electron->velocity( $vel + $acc * $dt );
   $electron->position( $pos + $vel * $dt + $acc * $dt**2 / 2 );
 
@@ -100,14 +112,6 @@ sub near_lens {
       $self->{time_step} *= 10 ;
     }
   }
-}
-
-sub mag_force {
-  my $self = shift;
-  my $v = shift;
-  my $B = shift;
-  my $force = crossp($v, $B);
-  return $force;
 }
 
 1;

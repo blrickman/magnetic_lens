@@ -36,8 +36,8 @@ sub energy   { $_[0]->{energy   }=$_[1] if defined $_[1]; $_[0]->{energy   } }
 sub position { $_[0]->{position }=$_[1] if defined $_[1]; $_[0]->{position } }
 sub velocity { $_[0]->{velocity }=$_[1] if defined $_[1]; $_[0]->{velocity } }
 
-sub mass     { $_[0]->{mass     }=$_[1] if defined $_[1]; $_[0]->{mass     } }
-sub charge   { $_[0]->{charge   }=$_[1] if defined $_[1]; $_[0]->{charge   } }
+sub mass     { $_[0]->{mass     } }
+sub charge   { $_[0]->{charge   } }
 
 sub min_rad  { $_[0]->{min_rad  }=$_[1] if defined $_[1]; $_[0]->{min_rad  } }
 
