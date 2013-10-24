@@ -1,13 +1,14 @@
 package Physics::ElectronProp::Solenoid;
 
-use parent EM_lens;
+use parent 'Physics::ElectronProp::EM_lens';
+use PDL;
 use PDL::GSLSF::ELLINT;
 
 sub _init {
   my $self = shift;
   $self->{num_loops} -= 1;
-  $self->B_Field(pdl [0,0,0]);
-  $self->E_Field(pdl [0,0,0]);
+  $self->B_Field(pdl [0,0,0,0]);
+  $self->E_Field(pdl [0,0,0,0]);
   print "The number of loops: " . $self->{test} -1 . "\n" if $self->{test};
   $self->{test} = 0;
 }
@@ -22,7 +23,7 @@ sub current	   { $_[0]->{current       }=$_[1] if defined $_[1]; $_[0]->{current
 sub B_Field {
   my $self = shift;
   my $pos  = shift;
-  my ($r,$theta,$z) = list $pos;
+  my ($r,$theta,$z,$t) = list $pos;
   my $Btot;
   for my $n (0..$self->num_loops) {
     $Btot += $self->Bloop($r,$z,$n/$self->num_loops);
@@ -31,7 +32,7 @@ sub B_Field {
 }
 
 sub E_Field {
-  return pdl (0, 0, 0)
+  return zeros(3)
 }
 
 ## Setup of solenoid ##

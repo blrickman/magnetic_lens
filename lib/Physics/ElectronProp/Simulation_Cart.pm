@@ -21,7 +21,9 @@ sub new {
 
 sub _init{
   my $self = shift;
-  $self->{time_step} = ($self->{z_end} - $self->{z_start}) / $self->{steps} / @{$self->electrons}[0]->{velocity}->index(2) unless defined $self->{time_step}; 
+  $self->{time_step} = ($self->{z_end} - $self->{z_start}) / $self->{steps} / @{$self->electrons}[0]->{velocity}->index(2) unless defined $self->{time_step};
+  $self->sim_time(-$self->time_step) unless defined $self->sim_time;
+  $self->{start_time} = ($self->sim_time);
   $_->history('time',-$self->time_step) for @{ $self->electrons };
 }
 
@@ -37,6 +39,8 @@ sub z_end   	{ $_[0]->{z_end    }}
 sub r_end   	{ $_[0]->{r_end    }}
 sub steps    	{ $_[0]->{steps	   }}
 sub time_step	{ $_[0]->{time_step}}
+sub sim_time	{ $_[0]->{sim_time} = $_[1] if defined $_[1]; $_[0]->{sim_time  }}
+sub start_time	{ $_[0]->{start_time}}
 
 sub evolve {
   my $self = shift;
@@ -50,6 +54,7 @@ sub evolve {
   $electron->history('pos_hist',$pos);
   $electron->history('vel_hist',$vel);
   $electron->history('time',$dt + $electron->history('time')->[-1]);
+  my $t = $self->sim_time($dt+$self->sim_time);
 
   my $r = sqrt($pos->index(0)**2 + $pos->index(1)**2);
   my $theta = atan2($pos->index(1),$pos->index(0));
@@ -58,21 +63,21 @@ sub evolve {
   
   ## B-Field ##
 
-  my @Bfield = map { $_->B_Field(pdl ($r,$theta,$z)) } @{ $self->lens };
+  my @Bfield = map { $_->B_Field(pdl ($r,$theta,$z,$t)) } @{ $self->lens };
   $Bfield[0] += pop @Bfield while @Bfield > 1;
   my ($Br,$Bt,$Bz) = dog($Bfield[0]);
   my ($Bx, $By) = ($Br * cos($theta) - $Bt * sin($theta), $Br * sin($theta) + $Bt * cos($theta));
 
   ## E-Field ##
 
-  my @Efield = map { $_->E_Field(pdl ($r,$theta,$z)) } @{ $self->lens };
+  my @Efield = map { $_->E_Field(pdl ($r,$theta,$z,$t)) } @{ $self->lens };
   $Efield[0] += pop @Efield while @Efield > 1;
   my ($Er,$Et,$Ez) = dog($Efield[0]);
   my ($Ex, $Ey) = ($Er * cos($theta) - $Et * sin($theta), $Er * sin($theta) + $Et * cos($theta));
 
   ## Lorentz Force Calculation ##
 
-  my $acc = (crossp(($vel, pdl($Bx, $By, $Bz)) + pdl($Ex, $Ey, $Ez)) * $qe / ($electron->mass);
+  my $acc = (crossp($vel, pdl($Bx, $By, $Bz)) + pdl($Ex, $Ey, $Ez)) * $qe / ($electron->mass);
   $electron->velocity( $vel + $acc * $dt );
   $electron->position( $pos + $vel * $dt + $acc * $dt**2 / 2 );
 
@@ -92,6 +97,7 @@ sub run {
       $self->evolve( $electron );
       $progress->update($l) unless $l++ % 100; 
     }
+  $self->sim_time($self->start_time);
   }
   $progress->update(@{ $self->electrons } * $self->steps);
   print "\n";
