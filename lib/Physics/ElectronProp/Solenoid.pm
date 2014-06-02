@@ -1,5 +1,7 @@
 package Physics::ElectronProp::Solenoid;
-
+use warnings;
+use strict;
+use Physics::ElectronProp::Auxiliary ':constants';
 use parent 'Physics::ElectronProp::EM_lens';
 use PDL;
 use PDL::GSLSF::ELLINT;
@@ -7,14 +9,13 @@ use PDL::GSLSF::ELLINT;
 sub _init {
   my $self = shift;
   $self->{num_loops} -= 1;
-  $self->B_Field(pdl [0,0,0,0]);
-  $self->E_Field(pdl [0,0,0,0]);
-  print "The number of loops: " . $self->{test} -1 . "\n" if $self->{test};
+  print "The number of loops: " . $self->{num_loops} -1 . "\n" if $self->{test};
   $self->{test} = 0;
 }
 
 ## Solenoid Lens Extra Parameters ##
 
+sub lens_type	   { 'solenoid' 	}
 sub num_loops      { $_[0]->{num_loops     } }
 sub current	   { $_[0]->{current       }=$_[1] if defined $_[1]; $_[0]->{current       } }
 
@@ -41,8 +42,8 @@ sub Bloop {
   my $self = shift;
   $self->{test} += 1 if $self->{test};
   my ($r,$z,$n) = @_;
-  my $Br = B_r($r, $z - $self->loop_step($n) - $self->front_pos, $self->sol_shape->($n));
-  my $Bz = B_z($r, $z - $self->loop_step($n) - $self->front_pos, $self->sol_shape->($n));
+  my $Br = B_r($r, $z - $self->loop_step($n) - $self->front_pos, $self->lens_shape->($n));
+  my $Bz = B_z($r, $z - $self->loop_step($n) - $self->front_pos, $self->lens_shape->($n));
   return pdl ($Br,0,$Bz)*$self->current;
 }
 
@@ -50,7 +51,7 @@ sub loop_step {
   my $self = shift;
   my $n = shift;
   return 0 if $self->num_loops == 0;
-  return $self->sol_length * $n ;
+  return $self->lens_length * $n ;
 }
 
 ## Magnetic Field Functions ##

@@ -5,9 +5,11 @@ use strict;
 use v5.10;
 use PDL;
 use Term::ProgressBar;
+use File::chdir;
 
 use Physics::ElectronProp::Solenoid;
 use Physics::ElectronProp::RF_Cavity;
+use Physics::ElectronProp::Generic_Lens;
 use Physics::ElectronProp::Electron;
 use Physics::ElectronProp::Auxiliary ':constants';
 
@@ -41,6 +43,8 @@ sub steps    	{ $_[0]->{steps	   }}
 sub time_step	{ $_[0]->{time_step}}
 sub sim_time	{ $_[0]->{sim_time} = $_[1] if defined $_[1]; $_[0]->{sim_time  }}
 sub start_time	{ $_[0]->{start_time}}
+sub prog_silent { $_[0]->{prog_silent}}
+sub dir		{ $_[0]->{dir}	= $_[1] if defined $_[1]; $_[0]->{dir	}}
 
 sub evolve {
   my $self = shift;
@@ -51,9 +55,9 @@ sub evolve {
   my $vel= $electron->velocity;
   my $qe = $electron->charge;
 
-  $electron->history('pos_hist',$pos);
-  $electron->history('vel_hist',$vel);
-  $electron->history('time',$dt + $electron->history('time')->[-1]);
+#  $electron->history('pos_hist',$pos);
+#  $electron->history('vel_hist',$vel);
+#  $electron->history('time',$dt + $electron->history('time')->[-1]);
   my $t = $self->sim_time($dt+$self->sim_time);
 
   my $r = sqrt($pos->index(0)**2 + $pos->index(1)**2);
@@ -86,22 +90,27 @@ sub evolve {
 
 sub run {
   my $self = shift;
+  my $CWD = $self->{dir};
   my $progress = Term::ProgressBar->new({
     count => @{ $self->electrons } * $self->steps, 
     ETA => 'linear',
     name => 'Progress',
+    silent => $self->prog_silent,
   });
   my $l = 0;
   for my $electron (@{ $self->electrons }) { 
+    open my $DATA_OUT, "> $CWD/e" . $electron->{id} . ".dat";
     while ($electron->{position}->index(2) < $self->z_end) {
       $self->evolve( $electron );
+      $self->export($electron,$DATA_OUT);
       $progress->update($l) unless $l++ % 100; 
     }
-  $self->sim_time($self->start_time);
+    close $DATA_OUT;
+    $self->sim_time($self->start_time);
   }
   $progress->update(@{ $self->electrons } * $self->steps);
   print "\n";
-  shift @{$_->history('time')} for @{ $self->electrons };
+#  shift @{$_->history('time')} for @{ $self->electrons };
 }
 
 sub near_lens {
@@ -118,6 +127,13 @@ sub near_lens {
       $self->{time_step} *= 10 ;
     }
   }
+}
+
+sub export {
+  my $self = shift;
+  my ($electron,$FH) = @_;
+  my @export = (list($electron->{position}), list($electron->{velocity}), $self->{sim_time} );
+  print $FH join(' ', @export) . "\n";
 }
 
 1;

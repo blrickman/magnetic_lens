@@ -6,70 +6,85 @@ use Physics::ElectronProp::Simulation_Cart;
 use Physics::ElectronProp::Auxiliary ':constants';
 use PDL::Util 'export2d';
 use PDL;
-use PDL::Graphics::Prima::Simple [1000,500];
+#use PDL::Graphics::Prima::Simple [1000,500];
 use File::chdir;
 use Getopt::Long;
-require configure;
-
-my $export = 1;
-my $dir = '';
+use File::Path 'make_path';
+use File::Spec;
+use File::Copy 'copy';
 
 GetOptions(
-  'export!'    => \$export,
-  'directory=s'  => \$dir,
+  'export!'    		=> \(my $export = 1),
+  'directory=s'  	=> \my $dir,
+  'force'       	=> \my $force,
+  'help'		=> \my $help,
 );
 
-unless ($dir) {
-  print "Please enter a directory name: ";
-  chomp($dir = <>);
+my $sim_file = shift;
+if ($help || !$dir || !$sim_file) {
+print <<END;
+Usage: $0 [options] file
+
+Options:
+  -e, --export		- should export data (default: true)
+    --noexport
+  -f, --force        	- should overwrite existing data (default: false)
+  -d, --directory	- directory in which to import data
+  -h, --help		- Shows this message
+
+END
+exit 1;
 }
 
-$dir = dir_exists($dir, 'data');
-print "Writing data files to:\n$dir\n" if $export;
+if ($export) { 
+  unless ($dir) {
+    my $clean_file = $sim_file;
+    $clean_file =~ s/\./_/g;
+    $dir = File::Spec->catdir( 'dir', $clean_file );
+  }
+ 
+  if (-d $dir and !$force) {
+    die "directory $dir exists, stopping\n";
+  }
+ 
+  make_path $dir;
+  print "Writing data files to:\n$dir\n";
+ 
+  if ( -e File::Spec->catfile( $dir, $sim_file ) and !$force ) {
+    die "file $sim_file already exists in $dir, stopping\n";
+  }
+ 
+  copy $sim_file, $dir;
+}
 
-my $sim = $configure::sim;
+my $sim = do $sim_file or die "Error reading file $sim_file: $!";
+$sim->{dir} = $dir;
 $sim->run();
 
-## Export Data to a new directory
-system("cp configure.pm data/$dir/configure.pm");
-my $i = 1;
-for my $electron (@{ $sim->electrons }) {
-  my $position = pdl $electron->history('pos_hist');
-  my $velocity = pdl $electron->history('vel_hist');
-  my $time     = transpose(pdl $electron->history('time'));
-  export(append(append($position,$velocity),$time),"e" . $i++ . '.dat', "data/$dir",1) if $export;
+## Single electron file history
 
-  #my @final_v = list(transpose($velocity)->slice(-1));
-  #my $vf = $final_v[0]**2 + $final_v[1]**2  + $final_v[2]**2;
-}
-
-## Subroutines
-sub dir_exists {
-  my $dir = shift;
-  local $CWD = shift;
-  if (-d $dir) {
-    warn "$dir already exists. Overwrite? (y/n)\n";
-    while (<>) {
-      return $dir if /y|Y/;
-      print "Define a new dir\n";
-      chomp($dir = <>);
-      mkdir $dir;
-      return $dir;
+if (@{$sim->electrons} == 1) {
+  my $steps = $sim->steps / 1000;
+  my $focus;
+  print "focus: ";
+  print $focus = `gnuplot -e "dir='$dir'; scale=$steps" .plot_single-ray.gp`;
+  my (@rfcE, @solI);
+    for (@{$sim->lens}) {
+      push @rfcE, $_->E_0 if $_->lens_type eq 'rfcavity';
+      push @solI, $_->current if $_->lens_type eq 'solenoid';
     }
-  }
-  mkdir $dir;
-  return $dir;
+  my $rfcE = join('; ', @rfcE) eq '' ? "na\t" : join('; ', @rfcE);
+  my $solI = join('; ', @solI) eq '' ? "na\t" : join('; ', @solI);
+  my $exists = -e "$dir/fit_history.dat";
+  open my $FIT, '>>' . "$dir/fit_history.dat";
+  print $FIT "Current,\t E-field,\t Focus\n" unless $exists;
+  print $FIT "$solI,\t $rfcE,\t $focus";
 }
 
-sub export {
-  my ($data,$fn) = (shift,shift);
-  local $CWD = shift; 
-  my $override = shift;
-  if (!(-e $fn) || $override) {
-    open my $fh, '>', $fn;
-    export2d($data, $fh);
-  }
-}
+## Run Gnuplot
+
+#system( "gnuplot -e 'file1 = \"..\/$dir\"' plot_single-ray.gp -");
+
 __END__
 ## Export Lens Shapes
 for my $lens (@{ $sim->lens }) {
