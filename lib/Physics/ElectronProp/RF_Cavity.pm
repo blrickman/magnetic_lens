@@ -78,15 +78,19 @@ sub TM_Fields {
   my ($m, $n, $p) = map { $self->{mode}{$_} } qw/m n p/;
 
   if ($field eq 'E') {
-    my $Er = $p==0 ? 0 : -$E0 * $gamma_mn * $p * pi / (4 * $d * $gamma2) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin(2*$p*pi*$z/$d) * cos($omega * $t - $phi);
-    my $Et = $m==0 || $p ==0 ? 0 : $E0 * $m * $p * pi / (2 * $d * $gamma2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin(2*$p*pi*$z/$d) * sin($omega * $t - $phi);
-    my $Ez = $E0 * bessjn($gamma_mn*$r,$m) * cos($p*pi*$z/$d) * cos($omega * $t - $phi);
-    return pdl [$Er,$Et,$Ez]
+    my $Er = $p==0 ? 0 : -$E0 * $gamma_mn * $p * pi / (4 * $d * $gamma2) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin(2*$p*pi*$z/$d);
+    my $Et = $m==0 || $p ==0 ? 0 : $E0 * $m * $p * pi / (2 * $d * $gamma2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin(2*$p*pi*$z/$d);
+    my $Ez = $E0 * bessjn($gamma_mn*$r,$m) * cos($p*pi*$z/$d);
+    my $E = pdl [$Er,$Et,$Ez];
+    return $E if $t == -99;
+    return $E * pdl [cos($omega * $t - $phi),sin($omega * $t - $phi),cos($omega * $t - $phi)];
   } else {
-    my $Br = $m==0 ? 0 : $mu * $E0 * $m * $epsilon * $omega / ($gamma2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d)**2 * cos($omega * $t - $phi);
-    my $Bt = $mu * $E0 * $gamma_mn * $epsilon * $omega / (2 * $gamma2) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d)**2 * sin($omega * $t - $phi);
+    my $Br = $m==0 ? 0 : $mu * $E0 * $m * $epsilon * $omega / ($gamma2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d)**2;
+    my $Bt = $mu * $E0 * $gamma_mn * $epsilon * $omega / (2 * $gamma2) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d)**2;
     my $Bz = 0;
-    return pdl [$Br,$Bt,$Bz]
+    my $B = pdl [$Br,$Bt,$Bz];
+    return $B if $t == -99;
+    return $B * pdl [cos($omega * $t - $phi),sin($omega * $t - $phi),cos($omega * $t - $phi)];
   }
 }
 
