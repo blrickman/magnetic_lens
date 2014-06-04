@@ -29,13 +29,12 @@ sub mode	{ $_[0]->{mode		} }
 sub epsilon	{ $_[0]->{epsilon	} }
 sub mu		{ $_[0]->{mu		} }
 sub radius	{ $_[0]->{radius	} }
-sub omega	{ $_[0]->{omega		} }
 sub phase	{ $_[0]->{phase		} }
 
 sub Cavity_Field{ $_[0]->{Cavity_Field		} }
-sub gamma_2	{ $_[0]->mu * $_[0]->epsilon * $_[0]->omega**2 - ($_[0]->{mode}{p} * pi / $_[0]->lens_length )**2 }
+
 sub gamma_mn	{ $_[0]->{rootx}->[$_[0]->{mode}{m}][$_[0]->{mode}{n}] / $_[0]->radius }
-sub omega_mnp	{ sqrt(($_[0]->gamma_mn**2 + ($_[0]->{mode}{p} * pi / $_[0]->lens_length )**2) / ($_[0]->mu * $_[0]->epsilon)) }
+sub omega	{ sqrt(($_[0]->gamma_mn**2 + ($_[0]->{mode}{p} * pi / $_[0]->lens_length )**2) / ($_[0]->mu * $_[0]->epsilon)) }
 
 ## E and B Fields ##
 
@@ -74,23 +73,24 @@ sub TM_Fields {
   my $field  = shift;
   my ($r,$theta,$z,$t) = @_;
 
-  my ($R, $d, $E0, $omega, $epsilon, $mu, $gamma2, $gamma_mn, $phi) = map { $self->$_ } qw/radius lens_length E_0 omega epsilon mu gamma_2 gamma_mn phase/;
+  my ($R, $d, $E0, $omega, $epsilon, $mu, $gamma_mn, $phi) = map { $self->$_ } qw/radius lens_length E_0 omega epsilon mu gamma_mn phase/;
   my ($m, $n, $p) = map { $self->{mode}{$_} } qw/m n p/;
+  die "Cannot have a n=0 TM mode. $!" if $n == 0;
 
   if ($field eq 'E') {
-    my $Er = $p==0 ? 0 : -$E0 * $gamma_mn * $p * pi / (4 * $d * $gamma2) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin(2*$p*pi*$z/$d);
-    my $Et = $m==0 || $p ==0 ? 0 : $E0 * $m * $p * pi / (2 * $d * $gamma2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin(2*$p*pi*$z/$d);
-    my $Ez = $E0 * bessjn($gamma_mn*$r,$m) * cos($p*pi*$z/$d);
+    my $Er = $p==0 ? 0 : -$E0 * $p * pi / ($d * $gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin($p*pi*$z/$d) * cos($m * $theta);
+    my $Et = $m==0 || $p ==0 ? 0 : $E0 * $m * $p * pi / ($d * $gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin($p*pi*$z/$d) * sin($m * $theta);
+    my $Ez = $E0 * bessjn($gamma_mn*$r,$m) * cos($p*pi*$z/$d) * cos($m * $theta);
     my $E = pdl [$Er,$Et,$Ez];
-    return $E if $t == -99;
-    return $E * pdl [cos($omega * $t - $phi),sin($omega * $t - $phi),cos($omega * $t - $phi)];
+    #return $E if $t == -99;
+    return $E * pdl [cos($omega * $t - $phi),cos($omega * $t - $phi),cos($omega * $t - $phi)];
   } else {
-    my $Br = $m==0 ? 0 : $mu * $E0 * $m * $epsilon * $omega / ($gamma2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d)**2;
-    my $Bt = $mu * $E0 * $gamma_mn * $epsilon * $omega / (2 * $gamma2) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d)**2;
+    my $Br = $m==0 ? 0 : $E0 * $m * $mu * $epsilon * $omega / ($gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d) * sin($m * $theta);
+    my $Bt = -$E0 * $mu *  $epsilon * $omega / ($gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d) * cos($m * $theta);
     my $Bz = 0;
     my $B = pdl [$Br,$Bt,$Bz];
-    return $B if $t == -99;
-    return $B * pdl [cos($omega * $t - $phi),sin($omega * $t - $phi),cos($omega * $t - $phi)];
+    #return $B if $t == -99;
+    return $B * pdl [sin($omega * $t - $phi),sin($omega * $t - $phi),sin($omega * $t - $phi)];
   }
 }
 
@@ -99,19 +99,22 @@ sub TE_Fields {
   my $field  = shift;
   my ($r,$theta,$z,$t) = @_;
 
-  my ($R, $d, $E0, $omega, $epsilon, $mu, $gamma2, $gamma_mn, $phi) = map { $self->$_ } qw/radius lens_length E_0 omega epsilon mu gamma_2 gamma_mn phase/;
+  my ($R, $d, $E0, $omega, $epsilon, $mu, $gamma_mn, $phi) = map { $self->$_ } qw/radius lens_length E_0 omega epsilon mu gamma_mn phase/;
   my ($m, $n, $p) = map { $self->{mode}{$_} } qw/m n p/;
+  die "Cannot have a n=0 or p=0 TE mode. $!" if $n == 0 || $p == 0;
 
   if ($field eq 'E') {
-    my $Er = $m==0 ? 0 : sqrt($epsilon*$mu) * $E0 * $m * $omega / ($gamma2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin($p*pi*$z/$d)**2 * cos($omega * $t - $phi);
-    my $Et = - sqrt($epsilon*$mu) * $E0 * $gamma_mn * $omega / (2 * $gamma2) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin($p*pi*$z/$d)**2 * sin($omega * $t - $phi);
+    my $Er = $m==0 ? 0 : $E0 * sqrt($epsilon*$mu) * $m * $omega / ($gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin($p*pi*$z/$d) * sin($m * $theta);
+    my $Et = -$E0 * sqrt($epsilon*$mu) * $omega / ($gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin($p*pi*$z/$d) * cos($m * $theta);
     my $Ez = 0;
-    return pdl [$Er,$Et,$Ez]
+    my $E = pdl [$Er,$Et,$Ez];
+    return $E * pdl [sin($omega * $t - $phi),sin($omega * $t - $phi),sin($omega * $t - $phi)];
   } else {
-    my $Br = $p==0 ? 0 : sqrt($epsilon/$mu) * $E0 * $gamma_mn * $p * pi / (4 * $d * $gamma2) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin(2*$p*pi*$z/$d) * cos($omega * $t - $phi);
-    my $Bt = $m==0 || $p ==0 ? 0 : sqrt($epsilon/$mu) * $E0 * $m * $p * pi / (2 * $d * $gamma2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin(2*$p*pi*$z/$d) * sin($omega * $t - $phi);
-    my $Bz = sqrt($epsilon/$mu) * $E0 * bessjn($gamma_mn*$r,$m) / $r * sin($p*pi*$z/$d) * cos($omega * $t - $phi);
-    return pdl [$Br,$Bt,$Bz]
+    my $Br = $E0 * sqrt($epsilon*$mu) * $p * pi / ($d * $gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d) * cos($m * $theta);
+    my $Bt = $m==0 ? 0 : -$E0 * sqrt($epsilon*$mu) * $m * $p * pi / ($d * $gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d) * sin($m * $theta);
+    my $Bz = $E0 * sqrt($epsilon*$mu) * bessjn($gamma_mn*$r,$m) * sin($p*pi*$z/$d) * cos($m * $theta);
+    my $B = pdl [$Br,$Bt,$Bz]
+    return $B * pdl [cos($omega * $t - $phi),cos($omega * $t - $phi),cos($omega * $t - $phi)];
   }
 }
 1;
