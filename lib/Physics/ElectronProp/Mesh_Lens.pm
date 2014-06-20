@@ -8,28 +8,31 @@ use PDL;
 
 sub _init {
   my $self = shift;
-  tie my @data, 'Tie::File' . $self->mesh_file or die "Can't open file: $!";
-  $self->{mesh_array } = \@data;
-  my (undef,$zi,$zf,$zs,$yi,$yf,$ys) = split '_', $self->mesh_file;
+  my @field_files = keys $self->{mesh_file};
+  for (@field_files) {
+    tie my @data, 'Tie::File', $self->mesh_file($_) or die "Can't open " . $self->mesh_file($_) . ": $!";
+    $self->{mesh_array}{$_} = \@data;
+  }
+  my (undef,$zi,$zf,$zs,$yi,$yf,$ys) = split '_', $self->mesh_file($field_files[0]);
+  $ys =~ s/\.\w+$//;
   $self->{mesh_length} = $zf - $zi;
   $self->{mesh_radius} = $yf - $yi;
   $self->{mesh_step  } = {'z' => $zs, 'y' => $ys};
   $self->{phase} = {'B',0,'E',0} unless defined $self->{phase};
-  $self->{omega} = 0 unless defined $self->{omega);
+  $self->{omega} = 0 unless defined $self->{omega};
 }
 
 ## Mesh Lens Extra Parameters ##
 
 sub lens_type	{ 'mesh' 	}
-sub mesh_file   { $_[0]->{mesh_file	} }
+sub mesh_file   { $_[0]->{mesh_file	}{$_[1]} }
 sub mesh_step 	{ $_[0]->{mesh_step 	}{$_[1]} }
 sub mesh_radius	{ $_[0]->{mesh_radius	} }
 sub mesh_length	{ $_[0]->{mesh_length	} }
 sub mesh_lineup { $_[0]->{mesh_lineup	} }
-sub mesh_array	{ $_[0]->{mesh_array	}[$_[1]] }
+sub mesh_array	{ $_[0]->{mesh_array	}{$_[1]}[$_[2]] }
 sub phase 	{ $_[0]->{phase 	}{$_[1]} }
 sub omega	{ $_[0]->{omega		} }
-
 
 ## E and B Fields ##
 
@@ -39,7 +42,6 @@ sub B_Field {
   my ($r,$theta,$z,$t) = list $pos;
   my $omega = $self->omega;
   my $phase = $self->phase(B);
-  my ($x, $y) = ($r * cos($theta), $r * sin($theta));
   if ($r <= $self->mesh_radius && $z <= $self->mesh_length + $self->front_pos && $z >= $self->front_pos) {
     return $self->get_fields('B',($r,$z-$self->front_pos)) * cos($omega*$t - $phi);
   }
@@ -63,6 +65,7 @@ sub E_Field {
 sub get_efields {
   my $self = shift;
   my ($field,$r,$z) = @_;
+  
   my @field_2d;
   for my $dir (0..1) {
     my ($ez, $er) = ( arr_grab($pos->index(0),\@z), arr_grab($pos->index(1),\@r) );
@@ -93,8 +96,19 @@ sub arr_grab {
   return \@return;
 }
 
+sub zy_pot {
+  return ij_pot(zy_ij(@_));
+}
 
-
+sub ij_pot {
+  my ($i,$j) = @_;
+  my @row = split ', ', $datafile[$i];
+  return $row[$j];
+}
+sub zy_ij {
+  my ($z, $y) = @_;
+  return (int ($z-$zi)/$zs, int ($y-$yi)/$ys);
+}
 
 
 

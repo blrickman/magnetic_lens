@@ -10,6 +10,7 @@ use File::chdir;
 use Physics::ElectronProp::Solenoid;
 use Physics::ElectronProp::RF_Cavity;
 use Physics::ElectronProp::Generic_Lens;
+use Physics::ElectronProp::Mesh_Lens;
 use Physics::ElectronProp::Electron;
 use Physics::ElectronProp::Auxiliary ':constants';
 
