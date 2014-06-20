@@ -12,35 +12,33 @@ use Physics::ElectronProp::RF_Cavity;
 
 ## Set up Cavity and parameters ##
 
-my $len = 1;
-my $rad	= 1;
-my $E0  = 1;
-my $w	= 1*10**9;
+my $len = 1*10**-2;
+my $rad	= 3*10**-2;
+my $E0  = 10**7;
 
-for my $phase (0..3) {
-$phase *= pi/2;
+for my $time (0..3) {
 
 my $cavity = Physics::ElectronProp::RF_Cavity->new(
-  sol_name	=> 'cav',
+  name	=> 'cav',
   radius 	=> $rad,
   lens_length	=> $len,
   front_pos	=> 0,
   mode		=> {field => 'TM', m => 0, n => 1, p => 0},
   epsilon	=> epsilon_0,
   mu		=> mu_0,
-  omega		=> $w,
   E_0		=> $E0,
-  phase		=> $phase,
+  phase		=> 0,
 );
-$w = sprintf("%.0e", $w);
+$time *= pi/2/$cavity->omega;
+my $w = sprintf("%.0e", $cavity->omega);
 
 my $mode = $cavity->{mode}{field} . $cavity->{mode}{m} . $cavity->{mode}{n} . $cavity->{mode}{p};
 
 ## Set up simulation ##
 
 my $t = 0;	#Time that removes temporal dependance of fields
-my @r_heights = map {$_/10} (0..10);
-my $z_step = 0.01;
+my @r_heights = map {$rad*$_/10} (0..10);
+my $z_step = 0.01*$len;
 
 my @fields = qw/ E_r E_t E_z B_r B_t B_z/;
 my %FIELDFH;
@@ -80,11 +78,11 @@ for my $z (0..$len/$z_step) {
 
 my $rs = @r_heights + 1;
 my %y_range = (
-  E_r => 1,
+  E_r => 10**7,
   E_t => 1,
   E_z => 1,
   B_r => 1,
-  B_t => 1.3*10**-8,
+  B_t => .05,
   B_z => 1,
 );
 

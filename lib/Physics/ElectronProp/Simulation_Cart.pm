@@ -45,6 +45,7 @@ sub sim_time	{ $_[0]->{sim_time} = $_[1] if defined $_[1]; $_[0]->{sim_time  }}
 sub start_time	{ $_[0]->{start_time}}
 sub prog_silent { $_[0]->{prog_silent}}
 sub dir		{ $_[0]->{dir}	= $_[1] if defined $_[1]; $_[0]->{dir	}}
+sub fields	{ $_[0]->{fields} = $_[1] if defined $_[1]; $_[0]->{fields  }}
 
 sub evolve {
   my $self = shift;
@@ -79,9 +80,12 @@ sub evolve {
   my ($Er,$Et,$Ez) = dog($Efield[0]);
   my ($Ex, $Ey) = ($Er * cos($theta) - $Et * sin($theta), $Er * sin($theta) + $Et * cos($theta));
 
+  $self->fields([$Ex,$Ey,$Ez,$Bx,$By,$Bz,$t]);
+
   ## Lorentz Force Calculation ##
 
   my $acc = (crossp($vel, pdl($Bx, $By, $Bz)) + pdl($Ex, $Ey, $Ez)) * $qe / ($electron->mass);
+  $electron->accel( $acc );
   $electron->velocity( $vel + $acc * $dt );
   $electron->position( $pos + $vel * $dt + $acc * $dt**2 / 2 );
 
@@ -98,13 +102,17 @@ sub run {
     silent => $self->prog_silent,
   });
   my $l = 0;
+  my $first = 0;
   for my $electron (@{ $self->electrons }) { 
     open my $DATA_OUT, "> $CWD/e" . $electron->{id} . ".dat";
+    open my $FIELD_OUT, "> $CWD/e" .  $electron->{id} . "_fields.dat" unless $first;
     while ($electron->{position}->index(2) < $self->z_end) {
       $self->evolve( $electron );
       $self->export($electron,$DATA_OUT);
+      $self->export_field($FIELD_OUT) unless $first;
       $progress->update($l) unless $l++ % 100; 
     }
+    close $FIELD_OUT unless $first++;
     close $DATA_OUT;
     $self->sim_time($self->start_time);
   }
@@ -132,8 +140,14 @@ sub near_lens {
 sub export {
   my $self = shift;
   my ($electron,$FH) = @_;
-  my @export = (list($electron->{position}), list($electron->{velocity}), $self->{sim_time} );
+  my @export = (list($electron->{position}), list($electron->{velocity}), list($electron->{accel}), $self->{sim_time} );
   print $FH join(' ', @export) . "\n";
+}
+
+sub export_field {
+  my $self = shift;
+  my $FH = shift;
+  print $FH join(' ',@{$self->fields}) . "\n";
 }
 
 1;

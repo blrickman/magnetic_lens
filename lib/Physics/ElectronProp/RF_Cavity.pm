@@ -19,11 +19,13 @@ sub _init {
   } else {
     die "Cavity type is undefined: $!";
   }
+  print $self->name . " has a frequency of " . sprintf('%.3e',$self->omega/(2*pi)) . "Hz.\n";
 }
 
 ## RF Cavity Lens Extra Parameters ##
 
 sub lens_type	{ 'rfcavity' 	}
+sub name	{ $_[0]->{name		} }
 sub E_0		{ $_[0]->{E_0		} }
 sub mode	{ $_[0]->{mode		} }
 sub epsilon	{ $_[0]->{epsilon	} }
@@ -113,7 +115,7 @@ sub TE_Fields {
     my $Br = $E0 * sqrt($epsilon*$mu) * $p * pi / ($d * $gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d) * cos($m * $theta);
     my $Bt = $m==0 ? 0 : -$E0 * sqrt($epsilon*$mu) * $m * $p * pi / ($d * $gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d) * sin($m * $theta);
     my $Bz = $E0 * sqrt($epsilon*$mu) * bessjn($gamma_mn*$r,$m) * sin($p*pi*$z/$d) * cos($m * $theta);
-    my $B = pdl [$Br,$Bt,$Bz]
+    my $B = pdl [$Br,$Bt,$Bz];
     return $B * pdl [cos($omega * $t - $phi),cos($omega * $t - $phi),cos($omega * $t - $phi)];
   }
 }
