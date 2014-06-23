@@ -16,11 +16,14 @@ sub _init {
   my (undef,$zi,$zf,$zs,$ri,$rf,$rs) = split '_', $self->mesh_file($field_files[0]);
   $rs =~ s/\.\w+$//;
   $self->{mesh_length} = $zf - $zi;
-  $self->{mesh_radius} = ($rf - $ri)/2;
+  $self->{mesh_radius} = ($rf - $ri);#/2;
   $self->{mesh_step  } = {'z' => $zs, 'r' => $rs};
   $self->{mesh_start } = {'z' => $zi, 'r' => $ri};
   $self->{phase} = {'B',0,'E',0} unless defined $self->{phase};
   $self->{omega} = 0 unless defined $self->{omega};
+  if ($self->mesh_lens_pos > $zf || $self->mesh_lens_pos < $zi) {
+    die "Check the lens position within the mesh :$!";
+  }
   $self->{mesh_pos} = $self->front_pos - $self->mesh_lens_pos;
 }
 
@@ -56,7 +59,7 @@ sub Field {
   my $omega = $self->omega;
   my $phase = $self->phase($field);
   if ($r <= $self->mesh_radius && $z <= $self->mesh_length + $self->mesh_pos && $z >= $self->mesh_pos) {
-    return $self->get_fields($field,($r,$z-$self->front_pos)) * cos($omega*$t - $phase);
+    return $self->get_fields($field,($r,$z-$self->mesh_pos)) * cos($omega*$t - $phase);
   }
   return zeros(3)
 }
@@ -85,6 +88,8 @@ sub box_zr {
   my ($fn_key,$z,$r) = @_;
   my ($i,$j) = $self->zr_ij(($z,$r));
   my @box;
+  $i = $i == $self->mesh_length / $self->mesh_step('z') ? $i-1 : $i;
+  $j = $j == $self->mesh_radius / $self->mesh_step('r') ? $j-1 : $j;
   for my $ii ($i,$i+1) {
     for my $jj ($j,$j+1) {
       push @box, [$self->ij_zr($ii,$jj),$self->ij_element($fn_key,$ii,$jj)];
