@@ -16,7 +16,7 @@ sub _init {
   my (undef,$zi,$zf,$zs,$ri,$rf,$rs) = split '_', $self->mesh_file($field_files[0]);
   $rs =~ s/\.\w+$//;
   $self->{mesh_length} = $zf - $zi;
-  $self->{mesh_radius} = $rf - $ri;
+  $self->{mesh_radius} = ($rf - $ri)/2;
   $self->{mesh_step  } = {'z' => $zs, 'r' => $rs};
   $self->{mesh_start } = {'z' => $zi, 'r' => $ri};
   $self->{phase} = {'B',0,'E',0} unless defined $self->{phase};
@@ -39,28 +39,26 @@ sub omega	{ $_[0]->{omega		} }
 ## E and B Fields ##
 
 sub B_Field {
-  my $self = shift;
-  my $pos  = shift;
+  my ($self,$pos) = @_;
+  $self->Field($pos,'B')
+}
+
+sub E_Field {
+  my ($self,$pos) = @_;
+  $self->Field($pos,'E')
+}
+
+sub Field {
+  my ($self,$pos,$field) = @_;
   my ($r,$theta,$z,$t) = list $pos;
   my $omega = $self->omega;
-  my $phase = $self->phase('B');
+  my $phase = $self->phase($field);
   if ($r <= $self->mesh_radius && $z <= $self->mesh_length + $self->front_pos && $z >= $self->front_pos) {
-    return $self->get_fields('B',($r,$z-$self->front_pos)) * cos($omega*$t - $phase);
+    return $self->get_fields($field,($r,$z-$self->front_pos)) * cos($omega*$t - $phase);
   }
   return zeros(3)
 }
 
-sub E_Field {
-  my $self = shift;
-  my $pos  = shift;
-  my ($r,$theta,$z,$t) = list $pos;
-  my $omega = $self->omega;
-  my $phase = $self->phase('E');
-  if ($r <= $self->radius && $z <= $self->lens_length + $self->front_pos && $z >= $self->front_pos) {
-    return $self->get_fields('E',($r,$z-$self->front_pos)) * cos($omega*$t - $phase);
-  }
-  return zeros(3)
-}
 
 # Field Retrieval from mesh
 
@@ -69,9 +67,13 @@ sub get_fields {
   my ($field,$r,$z) = @_;
   my @field;
   for ('z','r') {
-    my $pos = pdl (1,$z,$r,$z*$r);
-    my $box = $self->box_zr($field . $_,$z,$r);
-    push @field, inner($pos,$self->fit_4pt($box));
+    my $f_val = 0;
+    if (defined($self->mesh_file($field . $_))) {
+      my $pos = pdl (1,$z,$r,$z*$r);
+      my $box = $self->box_zr($field . $_,$z,$r);
+      $f_val = inner($pos,$self->fit_4pt($box));
+    }
+    push @field, $f_val;
   }
   return pdl ($field[1], 0, $field[0]);
 }
