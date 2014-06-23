@@ -21,6 +21,7 @@ sub _init {
   $self->{mesh_start } = {'z' => $zi, 'r' => $ri};
   $self->{phase} = {'B',0,'E',0} unless defined $self->{phase};
   $self->{omega} = 0 unless defined $self->{omega};
+  $self->{mesh_pos} = $self->front_pos - $self->mesh_lens_pos;
 }
 
 ## Mesh Lens Extra Parameters ##
@@ -31,7 +32,8 @@ sub mesh_step 	{ $_[0]->{mesh_step 	}{$_[1]} }
 sub mesh_start 	{ $_[0]->{mesh_start 	}{$_[1]} }
 sub mesh_radius	{ $_[0]->{mesh_radius	} }
 sub mesh_length	{ $_[0]->{mesh_length	} }
-sub mesh_lineup { $_[0]->{mesh_lineup	} }
+sub mesh_lens_pos { $_[0]->{mesh_lens_pos } }
+sub mesh_pos	{ $_[0]->{mesh_pos	} }
 sub mesh_array	{ $_[0]->{mesh_array	}{$_[1]}[$_[2]] }
 sub phase 	{ $_[0]->{phase 	}{$_[1]} }
 sub omega	{ $_[0]->{omega		} }
@@ -53,7 +55,7 @@ sub Field {
   my ($r,$theta,$z,$t) = list $pos;
   my $omega = $self->omega;
   my $phase = $self->phase($field);
-  if ($r <= $self->mesh_radius && $z <= $self->mesh_length + $self->front_pos && $z >= $self->front_pos) {
+  if ($r <= $self->mesh_radius && $z <= $self->mesh_length + $self->mesh_pos && $z >= $self->mesh_pos) {
     return $self->get_fields($field,($r,$z-$self->front_pos)) * cos($omega*$t - $phase);
   }
   return zeros(3)
