@@ -13,33 +13,44 @@ sub _init {
     tie my @data, 'Tie::File', $self->mesh_file($_) or die "Can't open " . $self->mesh_file($_) . ": $!";
     $self->{mesh_array}{$_} = \@data;
   }
-  my (undef,$zi,$zf,$zs,$ri,$rf,$rs) = split '_', $self->mesh_file($field_files[0]);
-  $rs =~ s/\.\w+$//;
+  my (undef,$zi,$zf,$zs,$ri,$rf,$rs,$zlpos) = split '_', $self->mesh_file($field_files[0]);
+  $zlpos =~ s/\.\w+$//;
   $self->{mesh_length} = $zf - $zi;
-  $self->{mesh_radius} = ($rf - $ri);#/2;
+  $self->{mesh_radius} = $rf - $ri;
   $self->{mesh_step  } = {'z' => $zs, 'r' => $rs};
   $self->{mesh_start } = {'z' => $zi, 'r' => $ri};
   $self->{phase} = {'B',0,'E',0} unless defined $self->{phase};
   $self->{omega} = 0 unless defined $self->{omega};
+  $self->{mesh_lens_pos} = $zlpos if defined $zlpos;
+  unless (defined $self->mesh_constant) {
+    $self->{mesh_constant} = 1;
+    warn "Mesh constant left undefined, defaulting to 1\n";
+  }
+  die unless defined $self->mesh_lens_pos;
   if ($self->mesh_lens_pos > $zf || $self->mesh_lens_pos < $zi) {
     die "Check the lens position within the mesh :$!";
   }
   $self->{mesh_pos} = $self->front_pos - $self->mesh_lens_pos;
 }
 
-## Mesh Lens Extra Parameters ##
+## Mesh Lens Set Parameters ##
+
+sub phase 	{ $_[0]->{phase 	}{$_[1]} }
+sub omega	{ $_[0]->{omega		} }
+sub mesh_constant { $_[0]->{mesh_constant} }
+sub mesh_file   { $_[0]->{mesh_file	}{$_[1]} }
+sub mesh_lens_pos { $_[0]->{mesh_lens_pos } }
+
+## Mesh Lens Auto Parameters ##
 
 sub lens_type	{ 'mesh' 	}
-sub mesh_file   { $_[0]->{mesh_file	}{$_[1]} }
 sub mesh_step 	{ $_[0]->{mesh_step 	}{$_[1]} }
 sub mesh_start 	{ $_[0]->{mesh_start 	}{$_[1]} }
 sub mesh_radius	{ $_[0]->{mesh_radius	} }
 sub mesh_length	{ $_[0]->{mesh_length	} }
-sub mesh_lens_pos { $_[0]->{mesh_lens_pos } }
 sub mesh_pos	{ $_[0]->{mesh_pos	} }
 sub mesh_array	{ $_[0]->{mesh_array	}{$_[1]}[$_[2]] }
-sub phase 	{ $_[0]->{phase 	}{$_[1]} }
-sub omega	{ $_[0]->{omega		} }
+
 
 ## E and B Fields ##
 
@@ -59,7 +70,7 @@ sub Field {
   my $omega = $self->omega;
   my $phase = $self->phase($field);
   if ($r <= $self->mesh_radius && $z <= $self->mesh_length + $self->mesh_pos && $z >= $self->mesh_pos) {
-    return $self->get_fields($field,($r,$z-$self->mesh_pos)) * cos($omega*$t - $phase);
+    return $self->get_fields($field,($r,$z-$self->mesh_pos)) * cos($omega*$t - $phase) * $self->mesh_constant;
   }
   return zeros(3)
 }
@@ -121,8 +132,8 @@ sub zr_ij {
   my $self = shift;
   my ($z, $r) = @_;
   return (
-    int ($z - $self->mesh_start('z'))/$self->mesh_step('z'), 
-    int ($r - $self->mesh_start('r'))/$self->mesh_step('r')
+    int (($z - $self->mesh_start('z'))/$self->mesh_step('z')), 
+    int (($r - $self->mesh_start('r'))/$self->mesh_step('r'))
   );
 }
 
