@@ -13,7 +13,8 @@ sub _init {
     tie my @data, 'Tie::File', $self->mesh_file($_) or die "Can't open " . $self->mesh_file($_) . ": $!";
     $self->{mesh_array}{$_} = \@data;
   }
-  my (undef,$zi,$zf,$zs,$ri,$rf,$rs,$zlpos) = split '_', $self->mesh_file($field_files[0]);
+  my $fn = (split '/', $self->mesh_file($field_files[0]))[-1];
+  my (undef,$zi,$zf,$zs,$ri,$rf,$rs,$zlpos) = split '_', $fn;
   $zlpos =~ s/\.\w+$//;
   $self->{mesh_length} = $zf - $zi;
   $self->{mesh_radius} = $rf - $ri;

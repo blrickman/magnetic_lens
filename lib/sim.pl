@@ -70,7 +70,6 @@ unless ($message =~ 'C') {
   print $LOG "$sim_dir:\n\t$message\n\n";
 }
 
-print "$CWD\n";
 my $sim = do $sim_file or die "Error reading file $sim_file: $!";
 $sim->{dir} = $dir;
 $sim->run();
