@@ -17,6 +17,7 @@ GetOptions(
   'export!'    		=> \(my $export = 1),
   'directory=s'  	=> \my $dir,
   'force'       	=> \my $force,
+  'message=s'		=> \my $message,
   'help'		=> \my $help,
 );
 
@@ -30,6 +31,7 @@ Options:
     --noexport
   -f, --force        	- should overwrite existing data (default: false)
   -d, --directory	- directory in which to import data
+  -m, --message		- message to write to log file describing sim
   -h, --help		- Shows this message
 
 END
@@ -57,6 +59,18 @@ if ($export) {
   copy $sim_file, $dir;
 }
 
+unless ($message) {
+  print "Describe this simulation (Type 'C' to skip): ";
+  $message = <>;
+}
+unless ($message =~ 'C') {
+  local $CWD = $dir;
+  my $sim_dir = pop @CWD;
+  open my $LOG, ">> simulation.log";
+  print $LOG "$sim_dir:\n\t$message\n\n";
+}
+
+print "$CWD\n";
 my $sim = do $sim_file or die "Error reading file $sim_file: $!";
 $sim->{dir} = $dir;
 $sim->run();
