@@ -4,13 +4,15 @@ use strict;
 use Physics::ElectronProp::Auxiliary ':constants';
 use parent 'Physics::ElectronProp::EM_lens';
 use Tie::File;
+use Fcntl 'O_RDONLY', 'O_RDWR';
 use PDL;
+
 
 sub _init {
   my $self = shift;
   my @field_files = keys $self->{mesh_file};
   for (@field_files) {
-    tie my @data, 'Tie::File', $self->mesh_file($_) or die "Can't open " . $self->mesh_file($_) . ": $!";
+    tie my @data, 'Tie::File', $self->mesh_file($_), mode => O_RDONLY or die "Can't open " . $self->mesh_file($_) . ": $!";
     $self->{mesh_array}{$_} = \@data;
   }
   my $fn = (split '/', $self->mesh_file($field_files[0]))[-1];
