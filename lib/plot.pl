@@ -12,6 +12,7 @@ GetOptions(
   'scale=s'    	=> \my $scale,
   'output=s'	=> \my $output,
   'help'	=> \my $help,
+  'minimum'	=> \my $find_min,
 );
 
 my $dir = shift;
@@ -49,21 +50,31 @@ if ($files) {
   if ($files eq 'TODO') {
     @files = $files[0]; # possibly add short cut to querry to only plot e10?
   } else {
-    my $half = @files / 2 + .5*(@files % 2);
     # Querries for a list of numbers (by assigned number) or shortcut 
     # and plot all using 'a', which is the default behavior.
     print "Enter numbers of files to be plotted separated by spaces or enter 'a' to plot all files:\n";
-    for (1..$half) {
-      if ($_ < $half) {
-        print "$_) ${files[$_-1]} \t" . ($_ + $half) . ") ${files[$_-1+$half]}\n" 
-      } else {
-        print "$_) ${files[$_-1]}\n"
-      }
-    }
+    list_files();
     my $file_query = <>;
     @files = $file_query =~ 'a' ? @files : map ($files[$_-1] , (split ' ', $file_query));
   }
 }
+
+# If --minimum is flagged, find the minimum of one electron path
+
+if ($find_min) {
+  if ($files eq 'TODO') {
+    @files = $files[0]; # possibly add short cut to querry to only plot e10?
+  } elsif (@files == 1) {
+    get_minimum($files[0]); #fits the same path selected by the fit;
+  } else {
+    # Select an electron path
+    print "Enter the number of the file to be fitted:\n";
+    list_files();
+    my $file_query = <>;
+    get_minimum($files[$file_query-1]);
+  }
+}
+
 
 # Set up hash to store relavent info for each axis
 my $axis = {
@@ -131,3 +142,34 @@ close $TMP;
 
 # Open output file
 `eog pictures/$output`;
+
+# Subroutines
+
+sub list_files {
+  my $half = @files / 2 + .5*(@files % 2);
+  for (1..$half) {
+    if ($_ < $half) {
+      print "$_) ${files[$_-1]} \t" . ($_ + $half) . ") ${files[$_-1+$half]}\n" 
+    } else {
+      print "$_) ${files[$_-1]}\n"
+    }
+  }
+}
+
+sub get_minimum {
+  open my $FH, "< $dir" ."@_" or die $!;
+  my @ele = split ' ', <$FH>;
+  my $min = sqrt($ele[0]**2 + $ele[1]**2);
+
+  while (<$FH>) {
+    my @ele = split ' ', $_;
+    if ($min < sqrt($ele[0]**2 + $ele[1]**2)) {
+      print "Minimum Found:\nr (m),\t\tz (mm),\t\tvr (m/s),\tvt (m/s)\n";
+      print ((join "\t", map sprintf("%.4e", $_), (${min},$ele[2]*1000,sqrt($ele[3]**2 + $ele[4]**2),$ele[5])) . "\n");
+      last
+    } else {
+      $min = sqrt($ele[0]**2 + $ele[1]**2);
+    }  
+  }
+}
+
