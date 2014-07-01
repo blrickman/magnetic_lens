@@ -24,7 +24,11 @@ sub new {
 
 sub _init{
   my $self = shift;
-  $self->{time_step} = ($self->{z_end} - $self->{z_start}) / $self->{steps} / @{$self->electrons}[0]->{velocity}->index(2) unless defined $self->{time_step};
+  if (defined $self->{time_step}) {
+    print "The estimated number of steps per run is " . sprintf( "%.2e", ($self->{z_end} - $self->{z_start}) / $self->{time_step} / @{$self->electrons}[0]->{velocity}->index(2)) . "\n";
+  } else {
+    $self->{time_step} = ($self->{z_end} - $self->{z_start}) / $self->{steps} / @{$self->electrons}[0]->{velocity}->index(2)
+  }
   $self->sim_time(-$self->time_step) unless defined $self->sim_time;
   $self->{start_time} = ($self->sim_time);
   $_->history('time',-$self->time_step) for @{ $self->electrons };
@@ -97,7 +101,7 @@ sub run {
   my $self = shift;
   my $CWD = $self->{dir};
   my $progress = Term::ProgressBar->new({
-    count => @{ $self->electrons } * $self->steps, 
+    count => @{ $self->electrons } * 20, 
     ETA => 'linear',
     name => 'Progress',
     silent => $self->prog_silent,
@@ -111,13 +115,17 @@ sub run {
       $self->evolve( $electron );
       $self->export($electron,$DATA_OUT);
       $self->export_field($FIELD_OUT) unless $first;
-      $progress->update($l) unless $l++ % 100; 
-    }
+      my $dist = ($electron->{position}->index(2)-$self->z_start)/( $self->z_end-$self->z_start);
+      $dist = $dist > 1 ? 1 : $dist;
+      $progress->update($l + int (20*$dist)) if $progress->last_update < $l + int (20*$dist);
+    } 
     close $FIELD_OUT unless $first++;
     close $DATA_OUT;
     $self->sim_time($self->start_time);
+    $l += 20;
+    $progress->message("Electron " . $l / 20 . " of " . @{ $self->electrons } . " is complete.");
   }
-  $progress->update(@{ $self->electrons } * $self->steps);
+  $progress->update(@{ $self->electrons } * 20);
   print "\n";
 #  shift @{$_->history('time')} for @{ $self->electrons };
 }
