@@ -44,34 +44,36 @@ exit 1;
 # Grab all electron files from DIR
 my @files = sort grep($_=~ /e\d{1,2}.dat/ , readdir($DIR));
 closedir($DIR);
+my @plot_files = @files;
 
 # If --files is flagged, keep relavent electron files
 if ($files) {
   if ($files eq 'TODO') {
-    @files = $files[0]; # possibly add short cut to querry to only plot e10?
+    @plot_files = $files[0]; # possibly add short cut to querry to only plot e10?
   } else {
     # Querries for a list of numbers (by assigned number) or shortcut 
     # and plot all using 'a', which is the default behavior.
     print "Enter numbers of files to be plotted separated by spaces or enter 'a' to plot all files:\n";
     list_files();
     my $file_query = <>;
-    @files = $file_query =~ 'a' ? @files : map ($files[$_-1] , (split ' ', $file_query));
+    @plot_files = $file_query =~ 'a' ? @files : map ($files[$_-1] , (split ' ', $file_query));
   }
 }
 
 # If --minimum is flagged, find the minimum of one electron path
 
 if ($find_min) {
-  if ($files eq 'TODO') {
-    @files = $files[0]; # possibly add short cut to querry to only plot e10?
-  } elsif (@files == 1) {
-    get_minimum($files[0]); #fits the same path selected by the fit;
+  if ($find_min eq 'TODO') {
+    my @min_files = $files[0]; # possibly add short cut to querry to only plot e10?
+  } elsif (@plot_files == 1) {
+    get_minimum($plot_files[0]); #fits the same path selected by the fit;
   } else {
     # Select an electron path
     print "Enter the number of the file to be fitted:\n";
     list_files();
     my $file_query = <>;
-    get_minimum($files[$file_query-1]);
+    my @min_files = $file_query =~ 'a' ? @files : map ($files[$_-1] , (split ' ', $file_query));
+    get_minimum($_) for @min_files;
   }
 }
 
@@ -117,7 +119,7 @@ if (defined $scale) {
 
 # Set up axes for gplot script
 my $axes = join ":", map ($axis->{$_}{marker} . "/(" . $axis->{$_}{scale} .")", ($x,$y));
-my $plot_files = join(",\\\n",map("'$dir${_}' u $axes w l lw 2 title '$_'",@files));
+my $plot_files = join(",\\\n",map("'$dir${_}' u $axes w l lw 2 title '$_'",@plot_files));
 
 # Set up labels for gplot script
 my @label = map {"$_ (" . $axis->{$_}{unit} . ")"} ($x,$y);
