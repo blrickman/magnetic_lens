@@ -76,7 +76,7 @@ $sim->run();
 
 ## Single electron file history
 
-if (@{$sim->electrons} == 1) {
+if (0) { # removing   (@{$sim->electrons} == 1) {
   my $steps = $sim->steps / 1000;
   my $focus;
   print "focus: ";
