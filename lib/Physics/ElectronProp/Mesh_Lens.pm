@@ -25,9 +25,10 @@ sub _init {
   $self->{phase} = {'B',0,'E',0} unless defined $self->{phase};
   $self->{omega} = 0 unless defined $self->{omega};
   $self->{mesh_lens_pos} = $zlpos if defined $zlpos;
-  unless (defined $self->mesh_constant) {
-    $self->{mesh_constant} = 1;
-    warn "Mesh constant left undefined, defaulting to 1\n";
+  unless (ref $self->{mesh_constant} eq ref {}) {
+    my $const = $self->{mesh_constant};
+    $self->{mesh_constant} = { 'E' => $const, 'B' => $const,};
+    warn "Extending mesh constant to E and B\n";
   }
   die unless defined $self->mesh_lens_pos;
   if ($self->mesh_lens_pos > $zf || $self->mesh_lens_pos < $zi) {
@@ -40,7 +41,7 @@ sub _init {
 
 sub phase 	{ $_[0]->{phase 	}{$_[1]} }
 sub omega	{ $_[0]->{omega		} }
-sub mesh_constant { $_[0]->{mesh_constant} }
+sub mesh_constant { $_[0]->{mesh_constant}{$_[1]} }
 sub mesh_file   { $_[0]->{mesh_file	}{$_[1]} }
 sub mesh_lens_pos { $_[0]->{mesh_lens_pos } }
 
@@ -72,8 +73,9 @@ sub Field {
   my ($r,$theta,$z,$t) = list $pos;
   my $omega = $self->omega;
   my $phase = $self->phase($field);
+  my $const = $self->mesh_constant($field);
   if ($r <= $self->mesh_radius && $z <= $self->mesh_length + $self->mesh_pos && $z >= $self->mesh_pos) {
-    return $self->get_fields($field,($r,$z-$self->mesh_pos)) * cos($omega*$t - $phase) * $self->mesh_constant;
+    return $self->get_fields($field,($r,$z-$self->mesh_pos)) * cos($omega*$t - $phase) * $const;
   }
   return zeros(3)
 }
@@ -85,7 +87,7 @@ sub get_fields {
   my $self = shift;
   my ($field,$r,$z) = @_;
   my @field;
-  for (qw/ r t z /) {
+  for ( qw/ r t z /) {
     my $f_val = 0;
     if (defined($self->mesh_file($field . $_))) {
       my $pos = pdl (1,$z,$r,$z*$r);
@@ -94,7 +96,7 @@ sub get_fields {
     }
     push @field, $f_val;
   }
-  return pdl ($field[1], 0, $field[0]);
+  return pdl \@field;
 }
 
 sub box_zr {

@@ -17,30 +17,47 @@ GetOptions(
 
 die "Enter a directoy!" unless defined $basedir;
 
-
-my ($R,$L,$N) = (10,10,20);
-my $dir = $basedir . "R" . sprintf("%02d", $R) . "mm_L" . sprintf("%02d", $L) . "mm_N$N";
-make_path $dir;
-
+## Simulation Ranges
 my $zf  = 10.0*10**-2;
 my $rad = 1.00*10**-3;
-my $zs  = $zf  / 100;
-my $rs  = $rad / 100;
+my $zs  = $zf  / 1000;
+my $rs  = $rad / 1000;
+my @fields = qw/ ez bt /;
 
+## Lens Parameters
+my ($R,$L,$N) = (10,10,20);
 my $front_rad	= $R*10**-3;
 my $back_rad 	= $R*10**-3;
 my $shape 	= sub {my $n = shift; $front_rad - ($front_rad - $back_rad) * ($n);};
+my @mode_value	= qw/ TM 0 1 0/;
+my %mode;
+@mode{ qw/ field m n p /} = @mode_value;
 
-my $lens = Physics::ElectronProp::Solenoid->new(
-  lens_name	=> 'con-f',
+my $dir = $basedir . join('',@mode_value) . "_R" . sprintf("%02d", $R) . "mm_L" . sprintf("%02d", $L) . "mm";
+make_path $dir;
+
+my $lens2 = Physics::ElectronProp::Solenoid->new(
   front_radius 	=> $front_rad,
   back_radius	=> $back_rad,
   num_loops	=> $N,
-  lens_length	=> ($zf-$L*10**-3)/2,
+  lens_length	=> $L*10**-3,
   current	=> 1,
-  front_pos	=> 0.0475,
+  front_pos	=> ($zf-$L*10**-3)/2,
   lens_shape	=> $shape,
   test 		=> 0,
+);
+
+my $lens = Physics::ElectronProp::RF_Cavity->new(
+  name		=> 'cav1',
+  radius 	=> $front_rad,
+  lens_length	=> $L*10**-3,
+  E_0		=> 1,
+  front_pos	=> ($zf-$L*10**-3)/2,
+  mode		=> \%mode,
+  epsilon	=> epsilon_0,
+  mu		=> mu_0,
+  phase		=> 0,
+  test 		=> 1,
 );
 
 my $progress = Term::ProgressBar->new({
@@ -50,22 +67,26 @@ my $progress = Term::ProgressBar->new({
 });
 
 my $fn = join "_", (0,$zf,$zs,0,$rad,$rs,$lens->front_pos);
-my ($BZ, $BR);
+my %FILES;
 {
   local $CWD = $dir;
-  open $BZ, "> bz_$fn.dat" or die $!;
-  open $BR, "> br_$fn.dat" or die $!;
+  for ( @fields ) {
+    open $FILES{$_}, "> ${_}_$fn.dat" or die $!;
+  }
 } 
 
 for my $z (0..$zf/$zs) {
   $z *= $zs;
   for my $r (0..$rad/$rs) {
     $r *= $rs;
-    my $field = $lens->B_Field(pdl ($r,0,$z,0));
-    print $BR sprintf("%.16e", $field->index(0)) . ", ";
-    print $BZ sprintf("%.16e", $field->index(2)) . ", ";
+    my %field;
+    @field{ qw/ er et ez br bt bz / } = (list( $lens->E_Field(pdl ($r,0,$z,0)) ),list($lens->B_Field( pdl ($r,0,$z,0)) ));
+    for my $f (@fields) {
+      my $FH = $FILES{$f}; 
+      print $FH sprintf("%.16e", $field{$f}) . ", ";
+    }
   }
-  print $_ "\n" for ($BZ,$BR);
+  print $_ "\n" for map $FILES{$_}, @fields;
   $progress->update($z/$zs);
 }
 
