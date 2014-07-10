@@ -85,7 +85,7 @@ sub get_fields {
   my $self = shift;
   my ($field,$r,$z) = @_;
   my @field;
-  for ('z','r') {
+  for (qw/ r t z /) {
     my $f_val = 0;
     if (defined($self->mesh_file($field . $_))) {
       my $pos = pdl (1,$z,$r,$z*$r);
