@@ -79,6 +79,7 @@ sub TM_Fields {
   my ($R, $d, $E0, $omega, $epsilon, $mu, $gamma_mn, $phi) = map { $self->$_ } qw/radius lens_length E_0 omega epsilon mu gamma_mn phase/;
   my ($m, $n, $p) = map { $self->{mode}{$_} } qw/m n p/;
   die "Cannot have a n=0 TM mode. $!" if $n == 0;
+  $omega = $self->test ? 1 : $omega;
 
   if ($field eq 'E') {
     my $Er = $p==0 ? 0 : -$E0 * $p * pi / ($d * $gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin($p*pi*$z/$d) * cos($m * $theta);
