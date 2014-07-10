@@ -9,8 +9,6 @@ use PDL::GSLSF::ELLINT;
 sub _init {
   my $self = shift;
   $self->{num_loops} -= 1;
-  print "The number of loops: " . $self->{num_loops} -1 . "\n" if $self->{test};
-  $self->{test} = 0;
 }
 
 ## Solenoid Lens Extra Parameters ##
@@ -40,7 +38,6 @@ sub E_Field {
 
 sub Bloop {
   my $self = shift;
-  $self->{test} += 1 if $self->{test};
   my ($r,$z,$n) = @_;
   my $Br = B_r($r, $z - $self->loop_step($n) - $self->front_pos, $self->lens_shape->($n));
   my $Bz = B_z($r, $z - $self->loop_step($n) - $self->front_pos, $self->lens_shape->($n));
