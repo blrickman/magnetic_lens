@@ -32,6 +32,7 @@ sub epsilon	{ $_[0]->{epsilon	} }
 sub mu		{ $_[0]->{mu		} }
 sub radius	{ $_[0]->{radius	} }
 sub phase	{ $_[0]->{phase		} }
+sub test	{ $_[0]->{test		} }
 
 sub Cavity_Field{ $_[0]->{Cavity_Field		} }
 
@@ -84,14 +85,14 @@ sub TM_Fields {
     my $Et = $m==0 || $p ==0 ? 0 : $E0 * $m * $p * pi / ($d * $gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin($p*pi*$z/$d) * sin($m * $theta);
     my $Ez = $E0 * bessjn($gamma_mn*$r,$m) * cos($p*pi*$z/$d) * cos($m * $theta);
     my $E = pdl [$Er,$Et,$Ez];
-    #return $E if $t == -99;
+    return $E if $self->test;
     return $E * pdl [cos($omega * $t - $phi),cos($omega * $t - $phi),cos($omega * $t - $phi)];
   } else {
     my $Br = $m==0 ? 0 : $E0 * $m * $mu * $epsilon * $omega / ($gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d) * sin($m * $theta);
     my $Bt = -$E0 * $mu *  $epsilon * $omega / ($gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d) * cos($m * $theta);
     my $Bz = 0;
     my $B = pdl [$Br,$Bt,$Bz];
-    #return $B if $t == -99;
+    return $B if $self->test;
     return $B * pdl [sin($omega * $t - $phi),sin($omega * $t - $phi),sin($omega * $t - $phi)];
   }
 }
@@ -110,12 +111,14 @@ sub TE_Fields {
     my $Et = -$E0 * sqrt($epsilon*$mu) * $omega / ($gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin($p*pi*$z/$d) * cos($m * $theta);
     my $Ez = 0;
     my $E = pdl [$Er,$Et,$Ez];
+    return $E if $self->test;
     return $E * pdl [sin($omega * $t - $phi),sin($omega * $t - $phi),sin($omega * $t - $phi)];
   } else {
     my $Br = $E0 * sqrt($epsilon*$mu) * $p * pi / ($d * $gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d) * cos($m * $theta);
     my $Bt = $m==0 ? 0 : -$E0 * sqrt($epsilon*$mu) * $m * $p * pi / ($d * $gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d) * sin($m * $theta);
     my $Bz = $E0 * sqrt($epsilon*$mu) * bessjn($gamma_mn*$r,$m) * sin($p*pi*$z/$d) * cos($m * $theta);
     my $B = pdl [$Br,$Bt,$Bz];
+    return $B if $self->test;
     return $B * pdl [cos($omega * $t - $phi),cos($omega * $t - $phi),cos($omega * $t - $phi)];
   }
 }
