@@ -20,6 +20,8 @@ sub _init {
     die "Cavity type is undefined: $!";
   }
   print $self->name . " has a frequency of " . sprintf('%.3e',$self->omega/(2*pi)) . "Hz.\n";
+  $self->{off}{'B'} = 0 unless defined $self->{off}{'B'};
+  $self->{off}{'E'} = 0 unless defined $self->{off}{'E'};
 }
 
 ## RF Cavity Lens Extra Parameters ##
@@ -33,11 +35,26 @@ sub mu		{ $_[0]->{mu		} }
 sub radius	{ $_[0]->{radius	} }
 sub phase	{ $_[0]->{phase		} }
 sub test	{ $_[0]->{test		} }
+sub off		{ $_[0]->{off		}{$_[1]} }
 
 sub Cavity_Field{ $_[0]->{Cavity_Field		} }
 
 sub gamma_mn	{ $_[0]->{rootx}->[$_[0]->{mode}{m}][$_[0]->{mode}{n}] / $_[0]->radius }
 sub omega	{ sqrt(($_[0]->gamma_mn**2 + ($_[0]->{mode}{p} * pi / $_[0]->lens_length )**2) / ($_[0]->mu * $_[0]->epsilon)) }
+
+## Methods ##
+
+sub phase_shift {
+  my $self = shift;
+  my $electron = shift;
+  my ($E0, $L, $omega) = map { $self->$_ } qw/E_0 lens_length omega/;
+  my ($mass, $charge) = map { $electron->$_ } qw/mass charge/;
+  $charge *= -1;
+  my $v0 = $electron->velocity->index(2);
+  my $C1 = (-3 * $E0**2 * $L * $mass * $charge**2 * $omega**2 + sqrt($E0**3 * $mass**2 * $charge**3 * $omega**3 * (16 * $mass * $v0**3 + 9 * $E0 * $L**2 * $charge * $omega)))**(1/3)/2**(2/3);
+  printf "Phase shift is : %.5f \n", $mass*$v0*$omega/$C1 - $C1/$E0/$charge ;
+  return $mass*$v0*$omega/$C1 - $C1/$E0/$charge + $self->omega*$self->front_pos/$v0;
+}
 
 ## E and B Fields ##
 
@@ -45,6 +62,7 @@ sub B_Field {
   my $self = shift;
   my $pos  = shift;
   my ($r,$theta,$z,$t) = list $pos;
+  return zeros(3) if $self->off('B');
   if ($r <= $self->radius && $z <= $self->lens_length + $self->front_pos && $z >= $self->front_pos) {
     return $self->Fields('B',($r,$theta,$z-$self->front_pos,$t))
   }
@@ -55,6 +73,7 @@ sub E_Field {
   my $self = shift;
   my $pos  = shift;
   my ($r,$theta,$z,$t) = list $pos;
+  return zeros(3) if $self->off('E');
   if ($r <= $self->radius && $z <= $self->lens_length + $self->front_pos && $z >= $self->front_pos) {
     return $self->Fields('E',($r,$theta,$z-$self->front_pos,$t))
   }
@@ -77,6 +96,7 @@ sub TM_Fields {
   my ($r,$theta,$z,$t) = @_;
 
   my ($R, $d, $E0, $omega, $epsilon, $mu, $gamma_mn, $phi) = map { $self->$_ } qw/radius lens_length E_0 omega epsilon mu gamma_mn phase/;
+  ($epsilon, $mu) = (epsilon_0,mu_0);
   my ($m, $n, $p) = map { $self->{mode}{$_} } qw/m n p/;
   die "Cannot have a n=0 TM mode. $!" if $n == 0;
   $omega = $self->test ? 1 : $omega;
