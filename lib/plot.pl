@@ -13,6 +13,9 @@ GetOptions(
   'output=s'	=> \my $output,
   'help'	=> \my $help,
   'minimum'	=> \my $find_min,
+  'yrange=s'	=> \(my $yrange = ''),
+  'emfields'	=> \my $emfields,
+  'gpexport:s'	=> \my $export,
 );
 
 my $dir = shift;
@@ -26,6 +29,12 @@ Options:
 			  Ex: -a 'r(z)' (the default)
   -s, --scale		- scale the data to the ratio SCALE_X x SCALE_Y
 			  Ex: -s -3x-3 (the default, scales by 10**-3 on each axis)
+  -m, --minimum		- triggers the minimum find action
+  -y, --yrange 		- set the origin of the y-range
+			  Ex: -y 0
+  -e, --emfields	- include field files in electron file querry
+  -g, --gpexport	- write out the plot file to the directory where the electron files are
+			  Ex: -g "foo.gp"  OR  -g (default filename is plot.gp)
   -o, --output		- set output PNG filename
 			  Ex: -o filename.png
   -h, --help		- Shows this message
@@ -42,9 +51,14 @@ exit 1;
 }
 
 # Grab all electron files from DIR
-my @files = sort grep($_=~ /e\d{1,2}.dat/ , readdir($DIR));
+my @files = sort grep($_=~ /e-?\d{1,3}.dat/ , readdir($DIR));
+push @files, 'e105_fields.dat' if $emfields;
 closedir($DIR);
 my @plot_files = @files;
+
+# If --emfields is triggered, --files should default to TRUE
+
+$files = $emfields ? 1 : $files;
 
 # If --files is flagged, keep relavent electron files
 if ($files) {
@@ -89,6 +103,9 @@ my $axis = {
   'vx' => { qw% scale 3*10**8 unit c  dim m/s marker ($4)%	},
   'vy' => { qw% scale 3*10**8 unit c  dim m/s marker ($5)%	},
   'vz' => { qw% scale 3*10**8 unit c  dim m/s marker ($6)%	},
+  'ax' => { qw% scale 1 unit m/s/s  dim m/s/s marker ($7)%	},
+  'ay' => { qw% scale 1 unit m/s/s  dim m/s/s marker ($8)%	},
+  'az' => { qw% scale 1 unit m/s/s  dim m/s/s marker ($9)%	},
 };
 
 # Pick out the axes chosen in the --axes option
@@ -129,6 +146,7 @@ my $GNUPLOT_SCRIPT = <<END;
 set terminal pngcairo enhanced solid font "times,18" size 750, 500 
 set output "pictures/$output"
 set title "$title"
+set yrange [$yrange:]
 set xlabel "${label[0]}"
 set ylabel "${label[1]}"
 plot $plot_files
@@ -138,6 +156,10 @@ END
 open my $TMP, "> .plot.tmp" or die $!;
 print $TMP $GNUPLOT_SCRIPT;
 close $TMP;
+if (defined $export) {
+  $export = $export eq '' ? "plot.gp" : $export;
+  copy(".plot.tmp","$dir/$export") or die "Copy failed: $!";
+}
 
 # Execute script
 `gnuplot .plot.tmp`;
@@ -150,7 +172,7 @@ close $TMP;
 sub list_files {
   my $half = @files / 2 + .5*(@files % 2);
   for (1..$half) {
-    if ($_ < $half) {
+    if ($_ < (@files+1)/2) {
       print "$_) ${files[$_-1]} \t" . ($_ + $half) . ") ${files[$_-1+$half]}\n" 
     } else {
       print "$_) ${files[$_-1]}\n"
@@ -159,6 +181,7 @@ sub list_files {
 }
 
 sub get_minimum {
+  my $fn = $_[0];
   open my $FH, "< $dir" ."@_" or die $!;
   my @ele = split ' ', <$FH>;
   my $min = sqrt($ele[0]**2 + $ele[1]**2);
@@ -166,7 +189,7 @@ sub get_minimum {
   while (<$FH>) {
     my @ele = split ' ', $_;
     if ($min < sqrt($ele[0]**2 + $ele[1]**2)) {
-      print "Minimum Found:\nr (m),\t\tz (mm),\t\tvr (m/s),\tvt (m/s)\n";
+      print "Minimum Found for $fn:\nr (m),\t\tz (mm),\t\tvr (m/s),\tvt (m/s)\n";
       print ((join "\t", map sprintf("%.4e", $_), (${min},$ele[2]*1000,sqrt($ele[3]**2 + $ele[4]**2),$ele[5])) . "\n");
       last
     } else {
