@@ -102,7 +102,7 @@ sub TM_Fields {
   $omega = $self->test ? 1 : $omega;
 
   if ($field eq 'E') {
-    my $Er = $p==0 ? 0 : -$E0 * $p * pi / ($d * $gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin($p*pi*$z/$d) * cos($m * $theta);
+    my $Er = $p==0 ? 0 : -$E0 * $p * pi / (2 * $d * $gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * sin($p*pi*$z/$d) * cos($m * $theta);
     my $Et = $m==0 || $p ==0 ? 0 : $E0 * $m * $p * pi / ($d * $gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * sin($p*pi*$z/$d) * sin($m * $theta);
     my $Ez = $E0 * bessjn($gamma_mn*$r,$m) * cos($p*pi*$z/$d) * cos($m * $theta);
     my $E = pdl [$Er,$Et,$Ez];
@@ -110,7 +110,7 @@ sub TM_Fields {
     return $E * pdl [cos($omega * $t - $phi),cos($omega * $t - $phi),cos($omega * $t - $phi)];
   } else {
     my $Br = $m==0 ? 0 : $E0 * $m * $mu * $epsilon * $omega / ($gamma_mn**2) * (bessjn($gamma_mn*$r,$m) / $r ) * cos($p*pi*$z/$d) * sin($m * $theta);
-    my $Bt = -$E0 * $mu *  $epsilon * $omega / ($gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d) * cos($m * $theta);
+    my $Bt = $E0 * $mu *  $epsilon * $omega / (2 * $gamma_mn) * (bessjn($gamma_mn*$r,$m-1) - bessjn($gamma_mn*$r,$m+1)) * cos($p*pi*$z/$d) * cos($m * $theta);
     my $Bz = 0;
     my $B = pdl [$Br,$Bt,$Bz];
     return $B if $self->test;
