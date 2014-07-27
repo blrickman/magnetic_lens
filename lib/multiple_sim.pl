@@ -70,12 +70,13 @@ unless ($message =~ 'C') {
   print $LOG "$sim_dir:\n\t$message\n\n";
 }
 
-for our $current (50..99) {
-  my $subdir = File::Spec->catdir( $dir, "I_${current}A" );
-  make_path $subdir;
-  my $sim = do $sim_file or die "Error reading file $sim_file: $@";
-  $sim->{dir} = $subdir;
-  $sim->run();
+for our $field (10..30) {
+    our $Efield = $field/2 * 10**7;
+    my $subdir = File::Spec->catdir( $dir, sprintf("E_%.2e", $Efield) );
+    make_path $subdir;
+    my $sim = do $sim_file or die "Error reading file $sim_file: $@";
+    $sim->{dir} = $subdir;
+    $sim->run();
 }
 
 __END__
