@@ -59,7 +59,7 @@ sub B_r {
   my ($E,) = gsl_sf_ellint_Ecomp(k($r,$z,$a));
   my $Br = mu_0 * (-$K +($a**2 + $r**2 + $z**2)/((1 - k($r,$z,$a)**2)*Q($r,$z,$a)) * $E) / (2 * pi * sqrt(Q($r,$z,$a)))*$z;
   unless (dims($Br)) {
-    return ($Br==0) ? $Br : $Br/$r;
+    return ($Br==0) ? $Br : $Br/$r;  # I don't remember why this is necessary, but I am too afraid to change it...
   }
   $Br/=$r;
   $Br->inplace->setnantobad;

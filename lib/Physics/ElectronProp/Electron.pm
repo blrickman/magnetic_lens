@@ -22,7 +22,7 @@ sub _init {
   die "Define electron id's" unless $self->{id};
   if (defined $self->energy && defined $self->velocity) {
     warn "energy and velocity given, possible conflict, using velocity parameter\n";
-  } else{
+  } elsif (defined $self->energy) {
     $self->velocity( $self->KE_to_vel( $self->energy * qe, $self->mass));
     #print "Converting energy (" . $self->energy / 1000 ."keV) to velocity along z\nv = ". sprintf ("%.4f",$self->{velocity}[2] / vc ) . " c\n";
   }
@@ -41,7 +41,7 @@ sub accel    { $_[0]->{accel    }=$_[1] if defined $_[1]; $_[0]->{accel    } }
 
 sub mass     { $_[0]->{mass     } }
 sub charge   { $_[0]->{charge   } }
-sub del_v    { $_[0]->{del_v    } }
+sub v_t      { $_[0]->{v_t      } }
 sub id 	     { $_[0]->{id	} }
 
 sub min_rad  { $_[0]->{min_rad  }=$_[1] if defined $_[1]; $_[0]->{min_rad  } }
@@ -63,7 +63,7 @@ sub history {
 sub KE_to_vel { 
   my $self = shift;
   my ($energy,$mass) = @_;
-  return [$self->del_v,0,vc*(1-($energy/($mass*vc**2)+1)**-2)**.5];
+  return [$self->v_t,0,vc*(1-($energy/($mass*vc**2)+1)**-2)**.5];
 }
 
 1;

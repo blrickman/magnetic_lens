@@ -59,75 +59,26 @@ if ($export) {
   copy $sim_file, $dir;
 }
 
-unless ($message) {
-  print "Describe this simulation (Type 'C' to skip): ";
-  $message = <>;
-}
-unless ($message =~ 'C') {
+if ($message) {
   local $CWD = $dir;
   my $sim_dir = pop @CWD;
   open my $LOG, ">> simulation.log";
   print $LOG "$sim_dir:\n\t$message\n\n";
 }
 
-for our $field (10..30) {
-    our $Efield = $field/2 * 10**7;
-    my $subdir = File::Spec->catdir( $dir, sprintf("E_%.2e", $Efield) );
-    make_path $subdir;
-    my $sim = do $sim_file or die "Error reading file $sim_file: $@";
-    $sim->{dir} = $subdir;
-    $sim->run();
+my $batch = `grep "my \$batch" $sim_file`;
+{
+  $batch = join "", $batch =~ m/"(.*)"/;
+  local $/ = undef;
+  open my $BATCH, "< $batch" or die "Can't open file $batch $!";
+  $batch = @{ eval <$BATCH> } or die "Bad data in batch file $batch $!";
+  $batch -= 1;
 }
 
-__END__
-
-## Single electron file history
-
-if (0) { # removing   (@{$sim->electrons} == 1) {
-  my $steps = $sim->steps / 1000;
-  my $focus;
-  print "focus: ";
-  print $focus = `gnuplot -e "dir='$dir'; scale=$steps" .plot_single-ray.gp`;
-  my (@rfcE, @solI);
-    for (@{$sim->lens}) {
-      push @rfcE, $_->E_0 if $_->lens_type eq 'rfcavity';
-      push @solI, $_->current if $_->lens_type eq 'solenoid';
-    }
-  my $rfcE = join('; ', @rfcE) eq '' ? "na\t" : join('; ', @rfcE);
-  my $solI = join('; ', @solI) eq '' ? "na\t" : join('; ', @solI);
-  my $exists = -e "$dir/fit_history.dat";
-  open my $FIT, '>>' . "$dir/fit_history.dat";
-  print $FIT "Current,\t E-field,\t Focus\n" unless $exists;
-  print $FIT "$solI,\t $rfcE,\t $focus";
+for our $bt_num (0..$batch) {
+  my $sim = do $sim_file or die "Error reading file $sim_file: $@";
+  $sim->{dir} = File::Spec->catdir( $dir, $sim->sub_dir() );
+  make_path( $sim->dir() );
+  print "Completed " . $sim->bt_print();
+  $sim->run();
 }
-
-## Run Gnuplot
-
-#system( "gnuplot -e 'file1 = \"..\/$dir\"' plot_single-ray.gp -");
-
-__END__
-## Export Lens Shapes
-for my $lens (@{ $sim->lens }) {
-  my $fn_sol = join('_',
-  $lens->{sol_name},
-  $lens->{front_radius} . 'm',
-  $lens->{back_radius} . 'm',
-  $lens->{sol_length} . 'm',
-  $lens->{front_pos} . 'm',
-  );
-  export(transpose(cat($lens->plot_lens)),$fn_sol . '.lns', 'data/lens_shape',0);
-}
-
-my ($r,undef, $z) = dog(transpose($position));
-plot(
-  -height1	=> ds::Pair($z*100,$r*1000,
-    color 	=> cl::Red,
-    plotType 	=> ppair::Lines,
-  ),
-  -lens	=> ds::Pair($lensx*100,$lensy*1000,
-    color 	=> cl::Black,
-    plotType 	=> ppair::Lines,
-  ),
-  x		=> {label => 'z (cm)' },# , min => $zi, max => $zf},
-  y		=> {label => 'r (mm)' , min => -.0001, max => .26},
-);

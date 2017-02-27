@@ -21,6 +21,8 @@ GetOptions(
   'help'		=> \my $help,
 );
 
+my $m_off = 1; # Turning of message log since I never use it anymore
+
 my $sim_file = shift;
 if ($help || !$dir || !$sim_file) {
 print <<END;
@@ -46,7 +48,12 @@ if ($export) {
   }
  
   if (-d $dir and !$force) {
-    die "directory $dir exists, stopping\n";
+    print "Directory $dir exists, do you want to overwrite it? (y/N)\n";
+    my @input;
+    until (@input = <> =~ /(y|N)/) {
+      print "Match y or N exactly\n";
+    }
+    die "Stopping simulation\n" if $input[0] =~ /N/;
   }
  
   make_path $dir;
@@ -59,11 +66,11 @@ if ($export) {
   copy $sim_file, $dir;
 }
 
-unless ($message) {
+unless ($m_off || $message) {
   print "Describe this simulation (Type 'C' to skip): ";
   $message = <>;
 }
-unless ($message =~ 'C') {
+unless ($m_off || $message =~ 'C') {
   local $CWD = $dir;
   my $sim_dir = pop @CWD;
   open my $LOG, ">> simulation.log";

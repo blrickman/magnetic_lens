@@ -12,7 +12,9 @@ sub _init {
   my $self = shift;
   my @field_files = keys $self->{mesh_file};
   for (@field_files) {
-    tie my @data, 'Tie::File', $self->mesh_file($_), mode => O_RDONLY or die "Can't open " . $self->mesh_file($_) . ": $!";
+    my $file = $self->mesh_file($_);
+    tie my @data, 'Tie::File', $file, mode => O_RDONLY or die "Can't open " . $self->mesh_file($_) . ": $!";
+    $self->{mesh_comments}{$_} = `grep -c '#' $file`; #skip commented lines
     $self->{mesh_array}{$_} = \@data;
   }
   my $fn = (split '/', $self->mesh_file($field_files[0]))[-1];
@@ -24,17 +26,18 @@ sub _init {
   $self->{mesh_start } = {'z' => $zi, 'r' => $ri};
   $self->{phase} = {'B',0,'E',0} unless defined $self->{phase};
   $self->{omega} = 0 unless defined $self->{omega};
-  $self->{mesh_lens_pos} = $zlpos if defined $zlpos;
+  $self->{mesh_ref_pt} = $zlpos - $zi if defined $zlpos;
   unless (ref $self->{mesh_constant} eq ref {}) {
     my $const = $self->{mesh_constant};
     $self->{mesh_constant} = { 'E' => $const, 'B' => $const,};
     warn "Extending mesh constant to E and B\n";
   }
-  die unless defined $self->mesh_lens_pos;
-  if ($self->mesh_lens_pos > $zf || $self->mesh_lens_pos < $zi) {
-    die "Check the lens position within the mesh :$!";
+  die unless defined $self->mesh_ref_pt;
+  if ($self->mesh_ref_pt > $zf-$zi || $self->mesh_ref_pt < 0) {
+    die "Check the reference point within the mesh :$!";
   }
-  $self->{mesh_pos} = $self->front_pos - $self->mesh_lens_pos;
+  $self->{front_pos} = $self->front_pos - $self->mesh_ref_pt;
+  $self->{mesh_pos} = $self->front_pos + $self->mesh_ref_pt;
 }
 
 ## Mesh Lens Set Parameters ##
@@ -42,18 +45,18 @@ sub _init {
 sub phase 	{ $_[0]->{phase 	}{$_[1]} }
 sub omega	{ $_[0]->{omega		} }
 sub mesh_constant { $_[0]->{mesh_constant}{$_[1]} }
-sub mesh_file   { $_[0]->{mesh_file	}{$_[1]} }
-sub mesh_lens_pos { $_[0]->{mesh_lens_pos } }
+sub mesh_file   { $_[0]->{mesh_file	}{$_[1]} }	
 
 ## Mesh Lens Auto Parameters ##
 
 sub lens_type	{ 'mesh' 	}
-sub mesh_step 	{ $_[0]->{mesh_step 	}{$_[1]} }
-sub mesh_start 	{ $_[0]->{mesh_start 	}{$_[1]} }
-sub mesh_radius	{ $_[0]->{mesh_radius	} }
-sub mesh_length	{ $_[0]->{mesh_length	} }
-sub mesh_pos	{ $_[0]->{mesh_pos	} }
-sub mesh_array	{ $_[0]->{mesh_array	}{$_[1]}[$_[2]] }
+sub mesh_ref_pt { $_[0]->{mesh_ref_pt } }		# Mesh Space
+sub mesh_step 	{ $_[0]->{mesh_step 	}{$_[1]} }	# Mesh (and Sim) Space
+sub mesh_start 	{ $_[0]->{mesh_start 	}{$_[1]} }	# Mesh Space
+sub mesh_radius	{ $_[0]->{mesh_radius	} }		# Mesh Space
+sub mesh_length	{ $_[0]->{mesh_length	} }		# Mesh Space
+sub mesh_pos	{ $_[0]->{mesh_pos	} }		# Sim Space
+sub mesh_array	{ $_[0]->{mesh_array	}{$_[1]}[$_[2] + $_[0]->{mesh_comments}{$_[1]} ] } # skip commented lines
 
 
 ## E and B Fields ##
@@ -74,8 +77,10 @@ sub Field {
   my $omega = $self->omega;
   my $phase = $self->phase($field);
   my $const = $self->mesh_constant($field);
-  if ($r <= $self->mesh_radius && $z <= $self->mesh_length + $self->mesh_pos && $z >= $self->mesh_pos) {
-    return $self->get_fields($field,($r,$z-$self->mesh_pos)) * cos($omega*$t - $phase) * $const;
+  my ($MR,$MZ,$MZ0) = ($self->mesh_radius, $self->mesh_length,$self->front_pos);
+  if ($r <= $MR && $z <= $MZ + $MZ0 && $z >= $MZ0) {
+    $z = $z - $self->mesh_pos;
+    return $self->get_fields($field,($r,$z)) * cos($omega*$t - $phase) * $const;
   }
   return zeros(3)
 }
@@ -91,11 +96,12 @@ sub get_fields {
     my $f_val = 0;
     if (defined($self->mesh_file($field . $_))) {
       my $pos = pdl (1,$z,$r,$z*$r);
-      my $box = $self->box_zr($field . $_,$z,$r);
+      my $box = $self->box_zr($field . $_,$z,$r); 
       $f_val = inner($pos,$self->fit_4pt($box));
     }
     push @field, $f_val;
   }
+  #print pdl( \@field) . "\n" if $field eq 'B';
   return pdl \@field;
 }
 
@@ -111,11 +117,13 @@ sub box_zr {
       push @box, [$self->ij_zr($ii,$jj),$self->ij_element($fn_key,$ii,$jj)];
     }
   }
-  return \@box;
+  return \@box; #
 }
 
 sub fit_4pt {
   my ($self,$pts) = @_;
+  # $pts is a box_zr, it should have 4 elements.
+  # Each element should also have 3 subelements.
   my ($x0,$y0,$z00) = @{$$pts[0]};
   my ($x1,$y1,$z11) = @{$$pts[3]};
   my ($z01,$z10) = ($$pts[1][2],$$pts[2][2]);
@@ -129,6 +137,7 @@ sub fit_4pt {
 sub ij_element {
   my $self = shift;
   my ($fn_key,$i,$j) = @_;
+  die "This val doesn't exist: (" . $self->mesh_array($fn_key,140) . ")" unless $self->mesh_array($fn_key,$i);
   my @row = split ', ', $self->mesh_array($fn_key,$i);
   return $row[$j];
 }

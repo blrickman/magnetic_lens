@@ -18,29 +18,30 @@ GetOptions(
 die "Enter a directoy!" unless defined $basedir;
 
 ## Simulation Ranges
-my ($R,$L,$N,$hl) = (10,10,20,1);
+my ($R,$L,$N,$hl) = (104.2,50,20,1);
 my $zf  = $L*10**-3;
-my $rad = 3*$hl*10**-3;
+my $rad = $R*10**-3;
 my $zs  = $zf  / 100;
 my $rs  = $rad / 100;
-my @fields = qw/ ez er /;
+my @fields = qw/ bz br et /;
 
 ## Lens Parameters
+my $er		= 1;
 my $front_rad	= $R*10**-3;
 my $back_rad 	= $R*10**-3;
 my $shape 	= sub {my $n = shift; $front_rad - ($front_rad - $back_rad) * ($n);};
-my $E0		= .85*10**8;
-my @mode_value	= qw/ TM 0 1 0/;
+my $E0		= 1/sqrt(epsilon_0*mu_0);
+my @mode_value	= qw/ TE 0 1 1 /;
 my %mode;
 @mode{ qw/ field m n p /} = @mode_value;
 
-my $subdir = "Hole" . $hl . "mm_R" . sprintf("%02d", $R) . "mm_L" . sprintf("%02d", $L) . "mm";
+my $subdir = "TE011_R" . sprintf("%02d", $R) . "mm_L" . sprintf("%02d", $L) . "mm";
 #join('',@mode_value) . "_R" . sprintf("%02d", $R) . "mm_L" . sprintf("%02d", $L) . "mm";
 
 my $dir = $basedir . $subdir;
 make_path $dir;
 
-my $lens = Physics::ElectronProp::Aperture->new(
+my $lens3 = Physics::ElectronProp::Aperture->new(
   name		=> 'ap',
   radius 	=> $R/1000,
   lens_length	=> $R/1000,
@@ -71,7 +72,7 @@ my $lens1 = Physics::ElectronProp::RF_Cavity->new(
   E_0		=> $E0,
   front_pos	=> -$L*10**-3/2,
   mode		=> \%mode,
-  epsilon	=> epsilon_0,
+  epsilon	=> $er*epsilon_0,
   mu		=> mu_0,
   phase		=> 0,
   test 		=> 1,
@@ -83,7 +84,7 @@ my $progress = Term::ProgressBar->new({
   name => 'Progress',
 });
 
-my $fn = join "_", (-$zf,$zf,$zs,0,$rad,$rs,$lens->front_pos);
+my $fn = join "_", (-$zf/2,$zf/2,$zs,0,$rad,$rs,$lens1->front_pos);
 my %FILES;
 {
   local $CWD = $dir;
@@ -92,9 +93,9 @@ my %FILES;
   }
 } 
 
-my @lenses = ($lens,$lens1);
+my @lenses = ($lens1);
 
-for my $z (-$zf/$zs..$zf/$zs) {
+for my $z (-$zf/2/$zs..$zf/2/$zs) {
   $z *= $zs;
   for my $r (0..$rad/$rs) {
     $r *= $rs;

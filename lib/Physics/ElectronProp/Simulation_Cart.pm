@@ -9,6 +9,7 @@ use File::chdir;
 
 use Physics::ElectronProp::Solenoid;
 use Physics::ElectronProp::RF_Cavity;
+use Physics::ElectronProp::Dielectric_RF_Cavity;
 use Physics::ElectronProp::Generic_Lens;
 use Physics::ElectronProp::Mesh_Lens;
 use Physics::ElectronProp::Aperture;
@@ -31,8 +32,17 @@ sub _init{
     $self->{time_step} = ($self->{z_end} - $self->{z_start}) / $self->{steps} / @{$self->electrons}[0]->{velocity}->index(2)
   }
   $self->sim_time(-$self->time_step) unless defined $self->sim_time;
+  $self->all_fields(0) unless defined $self->all_fields;
   $self->{start_time} = ($self->sim_time);
   $_->history('time',-$self->time_step) for @{ $self->electrons };
+  $self->{debug} = 0 unless $self->{debug};
+  if (defined $self->batch) {
+    my ($batch,$num) = @{ $self->batch };
+    my ($print,@keys) = @{ $self->bt_print };
+    my ($subdir,@dkeys) = @{ $self->sub_dir };
+    $self->{sub_dir} = sprintf($subdir,map { $batch->[$num]{$_} } @dkeys);
+    $self->{bt_print} = sprintf($print,map { $batch->[$num]{$_} } @keys);
+  }
 }
 
 ## Sim Components ##
@@ -49,9 +59,14 @@ sub steps    	{ $_[0]->{steps	   }}
 sub time_step	{ $_[0]->{time_step}}
 sub sim_time	{ $_[0]->{sim_time} = $_[1] if defined $_[1]; $_[0]->{sim_time  }}
 sub start_time	{ $_[0]->{start_time}}
+sub batch	{ $_[0]->{batch    }}
+sub bt_print	{ $_[0]->{bt_print }}
+sub dir		{ $_[0]->{dir      }}
+sub sub_dir	{ $_[0]->{sub_dir  }}
 sub prog_silent { $_[0]->{prog_silent}}
-sub dir		{ $_[0]->{dir}	= $_[1] if defined $_[1]; $_[0]->{dir	}}
 sub fields	{ $_[0]->{fields} = $_[1] if defined $_[1]; $_[0]->{fields  }}
+sub all_fields	{ $_[0]->{all_fields} = $_[1] if defined $_[1]; $_[0]->{all_fields  }}
+sub debug	{ $_[0]->{debug    }}
 
 sub evolve {
   my $self = shift;
@@ -73,7 +88,6 @@ sub evolve {
   #$electron->min_rad([$r,$z]) if ($electron->min_rad->[0] > $r);
   
   ## B-Field ##
-
   my @Bfield = map { $_->B_Field(pdl ($r,$theta,$z,$t)) } @{ $self->lens };
   $Bfield[0] += pop @Bfield while @Bfield > 1;
   my ($Br,$Bt,$Bz) = dog($Bfield[0]);
@@ -90,7 +104,7 @@ sub evolve {
 
   ## Lorentz Force Calculation ##
 
-  my $acc = (crossp($vel, pdl($Bx, $By, $Bz)) + pdl($Ex, $Ey, $Ez)) * $qe / ($electron->mass);
+  my $acc = (crossp($vel, pdl($Bx, $By, $Bz)) + pdl($Ex, $Ey, $Ez)) * $qe / ($electron->mass) / gamma($vel)**3;
   $electron->accel( $acc );
   $electron->velocity( $vel + $acc * $dt );
   $electron->position( $pos + $vel * $dt + $acc * $dt**2 / 2 );
@@ -110,17 +124,21 @@ sub run {
   my $l = 0;
   my $first = 0;
   for my $electron (@{ $self->electrons }) { 
+    my $nd=1;
     open my $DATA_OUT, "> $CWD/e" . $electron->{id} . ".dat";
-    open my $FIELD_OUT, "> $CWD/e" .  $electron->{id} . "_fields.dat" unless $first;
-    while ($electron->{position}->index(2) < $self->z_end) {
+    open my $FIELD_OUT, "> $CWD/e" .  $electron->{id} . "_fields.dat" if !$first || $self->all_fields;
+    while ($electron->{position}->index(2) < $self->z_end && $electron->{position}->index(2)  >=$self->z_start) {
       $self->evolve( $electron );
       $self->export($electron,$DATA_OUT);
-      $self->export_field($FIELD_OUT) unless $first;
+      $self->export_field($electron,$FIELD_OUT) if !$first || $self->all_fields;
       my $dist = ($electron->{position}->index(2)-$self->z_start)/( $self->z_end-$self->z_start);
       $dist = $dist > 1 ? 1 : $dist;
       $progress->update($l + int (20*$dist)) if $progress->last_update < $l + int (20*$dist);
+      if ($electron->{position}->index(2) > ($self->z_end - $self->z_start)*$nd/10 && $self->debug) {
+        $progress->message( $electron->{position}->index(2) ); $nd++;
+      }
     } 
-    close $FIELD_OUT unless $first++;
+    close $FIELD_OUT unless $first++ || $self->all_fields;
     close $DATA_OUT;
     $self->sim_time($self->start_time);
     $l += 20;
@@ -156,8 +174,13 @@ sub export {
 
 sub export_field {
   my $self = shift;
-  my $FH = shift;
-  print $FH join(' ',@{$self->fields}) . "\n";
+  my ($electron,$FH) = @_;
+  print $FH join(' ',(list($electron->{position}),@{$self->fields})) . "\n";
+}
+
+sub gamma {
+  my ($vel) = @_;
+  return 1 / sqrt(1 - ($vel/vc)**2)
 }
 
 1;
